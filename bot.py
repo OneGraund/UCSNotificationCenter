@@ -442,5 +442,16 @@ if __name__ == '__main__':
     test_bots_starting(to_init)
     input_thread = threading.Thread(target=input_thread)
     start_bot_chanel_threads(to_init)
+
+    import tkinter as tk
+    from tkinter import messagebox
+
+    # Create a Tkinter root window (hidden)
+    root = tk.Tk()
+    root.withdraw()
+
+    # Show a pop-up message box
+    messagebox.showinfo("Pop-up Message", "This is a pop-up message!")
+
     input_thread.start()
         
