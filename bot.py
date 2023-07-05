@@ -1,6 +1,6 @@
 import datetime
 import os
-import sys
+import signal
 import dotenv
 import threading
 import time
@@ -13,7 +13,7 @@ dotenv.load_dotenv()
 support_wks = SupportWKS()
 support_data_wks = SupportDataWKS()
 
-TEST = False
+TEST = True
 START_MUTED = True
 
 
@@ -97,10 +97,11 @@ class TelegramChanel:
         self.chat_id = os.getenv(dotenv_name)
         self.bot = bot
         self.language = language
-        if sys.argv[1]=='all_resolved':
-            self.status='resolved'
-        else:
-            self.status = 'unknown'
+        with open('statistics/vova.txt', 'r') as f:
+            if f.readlines()== []:
+                self.status = 'unknown'
+            else:
+                self.status='resolved'
         self.warning = 'no warning'
         # self.send_message(f'Resolution status unknow. @vova_ucs please specify current chanel status')
         if not START_MUTED:
@@ -367,17 +368,17 @@ channel_params = {
     # 'TrnChanel': ('KFC_TRN_CHAT_ID', 'UCS_Support_Trn_Bot_TELEGRAM_API_TOKEN', 'sk'),
     # 'AuParkChanel': ('KFC_AUPARK_CHAT_ID', 'UCS_Support_Aupark_Bot_TELEGRAM_API_TOKEN', 'sk'),
     # 'EuroveaChanel': ('KFC_EUROVEA_CHAT_ID', 'UCS_Support_Eurovea_Bot_TELEGRAM_API_TOKEN', 'sk'),
-    'NivyChanel': ('KFC_NIVY_CHAT_ID', 'UCS_Support_Nivy_Bot_TELEGRAM_API_TOKEN', 'sk'),
+    # 'NivyChanel': ('KFC_NIVY_CHAT_ID', 'UCS_Support_Nivy_Bot_TELEGRAM_API_TOKEN', 'sk'),
     # 'TrnDrChanel': ('KFC_TRN_DR_CHAT_ID', 'UCS_Support_Trn_Dr_Bot_TELEGRAM_API_TOKEN', 'sk'),
-    'ScsChanel': ('KFC_SCS_CHAT_ID', 'UCS_Support_Scs_Bot_TELEGRAM_API_TOKEN', 'de'),
+    # 'ScsChanel': ('KFC_SCS_CHAT_ID', 'UCS_Support_Scs_Bot_TELEGRAM_API_TOKEN', 'de'),
     # 'MhsChanel': ('KFC_MHS_CHAT_ID', 'UCS_Support_Mhs_Bot_TELEGRAM_API_TOKEN', 'de'),
     # 'ParChanel': ('KFC_PAR_CHAT_ID', 'UCS_Support_Par_Bot_TELEGRAM_API_TOKEN', 'de'),
     # 'ColChanel': ('KFC_COL_CHAT_ID', 'UCS_Support_Col_Bot_TELEGRAM_API_TOKEN', 'de'),
-    'VivoChanel': ('KFC_VIVO_CHAT_ID', 'UCS_Support_Vivo_Bot_TELEGRAM_API_TOKEN', 'sk'),
+    # 'VivoChanel': ('KFC_VIVO_CHAT_ID', 'UCS_Support_Vivo_Bot_TELEGRAM_API_TOKEN', 'sk'),
     # 'RelaxChanel': ('KFC_RELAX_CHAT_ID', 'UCS_Support_Relax_Bot_TELEGRAM_API_TOKEN', 'sk'),
-    'LugChanel': ('KFC_LUG_CHAT_ID', 'UCS_Support_Lug_Bot_TELEGRAM_API_TOKEN', 'de'),
+    # 'LugChanel': ('KFC_LUG_CHAT_ID', 'UCS_Support_Lug_Bot_TELEGRAM_API_TOKEN', 'de'),
     # 'PlLinzChanel': ('KFC_PL_LINZ_CHAT_ID', 'UCS_Support_Pl_Linz_Bot_TELEGRAM_API_TOKEN', 'de'),
-    'EuropaBbChanel': ('KFC_EUROPA_BB_CHAT_ID', 'UCS_Support_Europa_Bb_Bot_TELEGRAM_API_TOKEN', 'sk'),
+    # 'EuropaBbChanel': ('KFC_EUROPA_BB_CHAT_ID', 'UCS_Support_Europa_Bb_Bot_TELEGRAM_API_TOKEN', 'sk'),
     'TestChanel': ('TEST_CHAT_ID', 'UCS_Support_Bot_TELEGRAM_API_TOKEN', 'de')
 }
 
@@ -420,8 +421,26 @@ def start_bot_chanel_threads(channels_to_init):
         print(f'\n\t[THREAD {channel_name.upper()}] Started ✅✅✅')
         time.sleep(1)
 
+def input_thread():
+    while True:
+        user_input = input()  # Waits for user input
+
+        # Check the user input and take appropriate actions
+        if user_input == 'kill':
+            print("Kill switch activated. Exiting gracefully...")
+            # Perform any necessary cleanup or finalization tasks here
+            os._exit(0)  # Terminate the script immediately
+        elif user_input == 'update':
+            print("Running update.bat...")
+            # Run the update.bat file
+            os.system("update.bat")
+        else:
+            print("Invalid input. Please try again.")
 
 if __name__ == '__main__':
     to_init = return_channels_to_init()
     test_bots_starting(to_init)
+    input_thread = threading.Thread(target=input_thread)
     start_bot_chanel_threads(to_init)
+    input_thread.start()
+        
