@@ -10,4 +10,4 @@ REM Install libraries from requirements.txt
 pip install -r requirements.txt
 
 REM Start the Python script and close the console window
-start "" /B python bot.py
+start "" /B python bot.py updated

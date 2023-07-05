@@ -1,11 +1,13 @@
 import datetime
 import os
-import signal
+import sys
+import tkinter as tk
 import dotenv
 import threading
 import time
 import telebot
 from sheets import SupportWKS, SupportDataWKS
+from tkinter import font
 from sip_call import call_employee
 
 dotenv.load_dotenv()
@@ -97,11 +99,10 @@ class TelegramChanel:
         self.chat_id = os.getenv(dotenv_name)
         self.bot = bot
         self.language = language
-        with open('statistics/vova.txt', 'r') as f:
-            if f.readlines()== []:
-                self.status = 'unknown'
-            else:
-                self.status='resolved'
+        if len(sys.argv) > 1 and sys.argv[1] == 'updated':
+            self.status = 'resolved'
+        else:
+            self.status='unknown'
         self.warning = 'no warning'
         # self.send_message(f'Resolution status unknow. @vova_ucs please specify current chanel status')
         if not START_MUTED:
@@ -421,26 +422,52 @@ def start_bot_chanel_threads(channels_to_init):
         print(f'\n\t[THREAD {channel_name.upper()}] Started ✅✅✅')
         time.sleep(1)
 
-def input_thread():
-    while True:
-        user_input = input()  # Waits for user input
 
-        # Check the user input and take appropriate actions
-        if user_input == 'kill':
-            print("Kill switch activated. Exiting gracefully...")
-            # Perform any necessary cleanup or finalization tasks here
-            os._exit(0)  # Terminate the script immediately
-        elif user_input == 'update':
-            print("Running update.bat...")
-            # Run the update.bat file
-            os.system("update.bat")
-        else:
-            print("Invalid input. Please try again.")
+def input_thread():
+    def on_kill():
+        print("Kill switch activated. Exiting gracefully...")
+        # Perform any necessary cleanup or finalization tasks here
+        os._exit(0)  # Terminate the script immediately
+
+    def on_update():
+        print("Running update.bat...")
+        # Run the update.bat file
+        os.system("update.bat")
+
+    # Create the tkinter window
+    window = tk.Tk()
+    window.title("Control Panel")
+    window.geometry("200x100")
+    window.resizable(False, False)  # Set window size as fixed
+
+    # Configure a dark-grey color scheme
+    bg_color = "#333333"  # Dark grey background color
+    fg_color = "#ffffff"  # White foreground color
+
+    window.configure(bg=bg_color)
+
+    # Create a frame to contain the buttons
+    button_frame = tk.Frame(window, bg=bg_color)
+    button_frame.pack(fill="both", expand=True)
+
+    # Define a bold font style
+    button_font = font.Font(weight="bold")
+
+    # Create the buttons
+    kill_button = tk.Button(button_frame, text="Kill", command=on_kill, bg=bg_color, fg=fg_color, font=button_font)
+    kill_button.pack(side="left", fill="both", expand=True)
+
+    update_button = tk.Button(button_frame, text="Update", command=on_update, bg=bg_color, fg=fg_color,
+                              font=button_font)
+    update_button.pack(side="right", fill="both", expand=True)
+
+    # Start the tkinter event loop
+    window.mainloop()
+
 
 if __name__ == '__main__':
+    input_thread = threading.Thread(target=input_thread)
+    input_thread.start()
     to_init = return_channels_to_init()
     test_bots_starting(to_init)
-    input_thread = threading.Thread(target=input_thread)
     start_bot_chanel_threads(to_init)
-
-        
