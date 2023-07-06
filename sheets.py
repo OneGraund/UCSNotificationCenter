@@ -73,7 +73,7 @@ class Worksheet(Spreadsheet):
     def buff_updater(self):
         print(f'[{self.worksheet_name.upper()} BUFFER UPDATER] Buffer updater is started and regularly updates .txt ✅')
         while True:
-            time.sleep(60 * 2)
+            time.sleep(60 * 5)
             write_lists_to_file(self.worksheet.get_all_values(), f'{self.worksheet_name}_buff.txt')
             print(f'\t[{self.worksheet_name.lower()} buffer] updated 💤')
 
