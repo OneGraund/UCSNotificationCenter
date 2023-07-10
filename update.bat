@@ -3,6 +3,8 @@
 REM Kill the running Python script
 taskkill /IM python.exe /F
 
+cd C:\ucs\UCSNotificationCenter\UCSNotificationCenter
+
 REM Update files from Git repository
 git pull origin main
 
