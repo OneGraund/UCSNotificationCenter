@@ -72,18 +72,9 @@ class UCSAustriaChanel:
             to_send += f'{init}\n'
         self.send_message(f'UCS Notification Center has started for this chanels:\n{to_send}')
         threading.Thread(target=self.sender).start()
-        self.message_handling()
 
     def send_message(self, message_text):
         self.bot.send_message(self.chat_id, message_text)
-
-    def message_handling(self):
-        @self.bot.message_handler(func=lambda message: True)
-        def monitor_incoming(message):
-            if message.text.lower() == 'supporting today' or message.text.lower() == 'сегодня сапортит':
-                self.send_message(support_wks.supporting_today())
-            self.bot.infinity_polling()
-
 
     def sender(self):
         while True:
@@ -254,7 +245,7 @@ class TelegramChanel:
         @self.bot.message_handler(func=lambda message: True)
         def monitor_incoming(message):
             lowered_message = message.text.lower()
-            print(f'[{self.str_name} TELEGRAM CHANEL] Received new message, message text: {message.text}, from '
+            print(f'[{datetime.datetime.now().strftime("%H:%M:%S")}] [{self.str_name} TELEGRAM CHANEL] Received new message, message text: {message.text}, from '
                   f'{message.from_user.username}')
             # """-------------Change status of telegram chanel from unknown-------------"""
             if is_from_ucs(message) and self.status == 'unknown':
@@ -380,7 +371,7 @@ channel_params = {
     # 'EuroveaChanel': ('KFC_EUROVEA_CHAT_ID', 'UCS_Support_Eurovea_Bot_TELEGRAM_API_TOKEN', 'sk'),
     # 'NivyChanel': ('KFC_NIVY_CHAT_ID', 'UCS_Support_Nivy_Bot_TELEGRAM_API_TOKEN', 'sk'),
     'TrnDrChanel': ('KFC_TRN_DR_CHAT_ID', 'UCS_Support_Trn_Dr_Bot_TELEGRAM_API_TOKEN', 'sk'),
-    'ScsChanel': ('KFC_SCS_CHAT_ID', 'UCS_Support_Scs_Bot_TELEGRAM_API_TOKEN', 'de'),
+    'ScsChanel': ('KFC_SCS_CHAT_ID', 'UCS_Support_Scs_Bot_TELEGRAM_API_TOKEN', 'de')
     # 'MhsChanel': ('KFC_MHS_CHAT_ID', 'UCS_Support_Mhs_Bot_TELEGRAM_API_TOKEN', 'de'),
     # 'ParChanel': ('KFC_PAR_CHAT_ID', 'UCS_Support_Par_Bot_TELEGRAM_API_TOKEN', 'de'),
     # 'ColChanel': ('KFC_COL_CHAT_ID', 'UCS_Support_Col_Bot_TELEGRAM_API_TOKEN', 'de'),

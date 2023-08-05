@@ -75,7 +75,7 @@ class Worksheet(Spreadsheet):
         while True:
             time.sleep(60 * 5)
             write_lists_to_file(self.worksheet.get_all_values(), f'{self.worksheet_name}_buff.txt')
-            print(f'\t[{self.worksheet_name.lower()} buffer] updated 💤')
+            # print(f'\t[{self.worksheet_name.lower()} buffer] updated 💤')
 
 
 class SupportWKS(Worksheet):
