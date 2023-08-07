@@ -359,28 +359,28 @@ def create_telegram_channel(channel_id, language, bot):
 
 
 channel_params = {
-    # 'WoerglChanel': ('KFC_WOERGL_CHATID', 'UCS_Support_Woergl_Bot_TELEGRAM_API_TOKEN', 'de'),
-    # 'MilChanel': ('KFC_MIL_CHATID', 'Ucs_Support_Mil_Bot_TELEGRAM_API_TOKEN', 'de'),
-    # 'KosiceChanel': ('KFC_KOSICE_CHATID', 'Ucs_Support_Kosice_Bot_TELEGRAM_API_TOKEN', 'sk'),
-    # 'DpChanel': ('KFC_DP_CHAT_ID', 'Ucs_Support_Dp_Bot_TELEGRAM_API_TOKEN', 'de'),
-    # 'FloChanel': ('KFC_FLO_CHAT_ID', 'Ucs_Support_Flo_Bot_TELEGRAM_API_TOKEN', 'de'),
-    # 'BrnChanel': ('KFC_BRN_CHAT_ID', 'UCS_Support_Brn_Bot_TELEGRAM_API_TOKEN', 'de'),
+    'WoerglChanel': ('KFC_WOERGL_CHATID', 'UCS_Support_Woergl_Bot_TELEGRAM_API_TOKEN', 'de'),
+    'MilChanel': ('KFC_MIL_CHATID', 'Ucs_Support_Mil_Bot_TELEGRAM_API_TOKEN', 'de'),
+    'KosiceChanel': ('KFC_KOSICE_CHATID', 'Ucs_Support_Kosice_Bot_TELEGRAM_API_TOKEN', 'sk'),
+    'DpChanel': ('KFC_DP_CHAT_ID', 'Ucs_Support_Dp_Bot_TELEGRAM_API_TOKEN', 'de'),
+    'FloChanel': ('KFC_FLO_CHAT_ID', 'Ucs_Support_Flo_Bot_TELEGRAM_API_TOKEN', 'de'),
+    'BrnChanel': ('KFC_BRN_CHAT_ID', 'UCS_Support_Brn_Bot_TELEGRAM_API_TOKEN', 'de'),
     'BoryMallChanel': ('KFC_BORYMALL_CHAT_ID', 'UCS_Support_Borymall_Bot_TELEGRAM_API_TOKEN', 'sk'),
     'TrnChanel': ('KFC_TRN_CHAT_ID', 'UCS_Support_Trn_Bot_TELEGRAM_API_TOKEN', 'sk'),
     'AuParkChanel': ('KFC_AUPARK_CHAT_ID', 'UCS_Support_Aupark_Bot_TELEGRAM_API_TOKEN', 'sk'),
-    # 'EuroveaChanel': ('KFC_EUROVEA_CHAT_ID', 'UCS_Support_Eurovea_Bot_TELEGRAM_API_TOKEN', 'sk'),
-    # 'NivyChanel': ('KFC_NIVY_CHAT_ID', 'UCS_Support_Nivy_Bot_TELEGRAM_API_TOKEN', 'sk'),
+    'EuroveaChanel': ('KFC_EUROVEA_CHAT_ID', 'UCS_Support_Eurovea_Bot_TELEGRAM_API_TOKEN', 'sk'),
+    'NivyChanel': ('KFC_NIVY_CHAT_ID', 'UCS_Support_Nivy_Bot_TELEGRAM_API_TOKEN', 'sk'),
     'TrnDrChanel': ('KFC_TRN_DR_CHAT_ID', 'UCS_Support_Trn_Dr_Bot_TELEGRAM_API_TOKEN', 'sk'),
-    'ScsChanel': ('KFC_SCS_CHAT_ID', 'UCS_Support_Scs_Bot_TELEGRAM_API_TOKEN', 'de')
-    # 'MhsChanel': ('KFC_MHS_CHAT_ID', 'UCS_Support_Mhs_Bot_TELEGRAM_API_TOKEN', 'de'),
-    # 'ParChanel': ('KFC_PAR_CHAT_ID', 'UCS_Support_Par_Bot_TELEGRAM_API_TOKEN', 'de'),
-    # 'ColChanel': ('KFC_COL_CHAT_ID', 'UCS_Support_Col_Bot_TELEGRAM_API_TOKEN', 'de'),
-    # 'VivoChanel': ('KFC_VIVO_CHAT_ID', 'UCS_Support_Vivo_Bot_TELEGRAM_API_TOKEN', 'sk'),
-    # 'RelaxChanel': ('KFC_RELAX_CHAT_ID', 'UCS_Support_Relax_Bot_TELEGRAM_API_TOKEN', 'sk'),
-    # 'LugChanel': ('KFC_LUG_CHAT_ID', 'UCS_Support_Lug_Bot_TELEGRAM_API_TOKEN', 'de'),
-    # 'PlLinzChanel': ('KFC_PL_LINZ_CHAT_ID', 'UCS_Support_Pl_Linz_Bot_TELEGRAM_API_TOKEN', 'de'),
-    # 'EuropaBbChanel': ('KFC_EUROPA_BB_CHAT_ID', 'UCS_Support_Europa_Bb_Bot_TELEGRAM_API_TOKEN', 'sk'),
-    # 'TestChanel': ('TEST_CHAT_ID', 'UCS_Support_Bot_TELEGRAM_API_TOKEN', 'de')
+    'ScsChanel': ('KFC_SCS_CHAT_ID', 'UCS_Support_Scs_Bot_TELEGRAM_API_TOKEN', 'de'),
+    'MhsChanel': ('KFC_MHS_CHAT_ID', 'UCS_Support_Mhs_Bot_TELEGRAM_API_TOKEN', 'de'),
+    'ParChanel': ('KFC_PAR_CHAT_ID', 'UCS_Support_Par_Bot_TELEGRAM_API_TOKEN', 'de'),
+    'ColChanel': ('KFC_COL_CHAT_ID', 'UCS_Support_Col_Bot_TELEGRAM_API_TOKEN', 'de'),
+    'VivoChanel': ('KFC_VIVO_CHAT_ID', 'UCS_Support_Vivo_Bot_TELEGRAM_API_TOKEN', 'sk'),
+    'RelaxChanel': ('KFC_RELAX_CHAT_ID', 'UCS_Support_Relax_Bot_TELEGRAM_API_TOKEN', 'sk'),
+    'LugChanel': ('KFC_LUG_CHAT_ID', 'UCS_Support_Lug_Bot_TELEGRAM_API_TOKEN', 'de'),
+    'PlLinzChanel': ('KFC_PL_LINZ_CHAT_ID', 'UCS_Support_Pl_Linz_Bot_TELEGRAM_API_TOKEN', 'de'),
+    'EuropaBbChanel': ('KFC_EUROPA_BB_CHAT_ID', 'UCS_Support_Europa_Bb_Bot_TELEGRAM_API_TOKEN', 'sk'),
+    'TestChanel': ('TEST_CHAT_ID', 'UCS_Support_Bot_TELEGRAM_API_TOKEN', 'de')
 }
 
 
