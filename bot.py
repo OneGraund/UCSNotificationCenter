@@ -326,7 +326,7 @@ class TelegramChanel:
                     )
                     to_append = f'{datetime.datetime.now().strftime("%A, %dth %B, %H:%M:%S")} issue resolved by ' \
                                 f' {is_from_ucs(message)} in ' \
-                                f'{elapsed_time} seconds. Response time: {end_time - self.response_time}'
+                                f'{elapsed_time} seconds. Response time: {end_time - self.response_time}\n'
                     if is_from_ucs(message).lower()=='vova':
                         with open('statistics/vova.txt', 'a') as f:
                             f.write(to_append)
