@@ -74,8 +74,22 @@ class Worksheet(Spreadsheet):
         print(f'[{self.worksheet_name.upper()} BUFFER UPDATER] Buffer updater is started and regularly updates .txt ✅')
         while True:
             time.sleep(60 * 5)
-            write_lists_to_file(self.worksheet.get_all_values(), f'{self.worksheet_name}_buff.txt')
-            # print(f'\t[{self.worksheet_name.lower()} buffer] updated 💤')
+            for i in range(0,5):
+                try:
+                    write_lists_to_file(self.worksheet.get_all_values(), f'{self.worksheet_name}_buff.txt')
+                    connenction_eror = None
+                except Exception as e:
+                    connection_error = str(e)
+                if connection_error:
+                    print(f'[{datetime.now().strftime("%d.%m.%Y %H:%M:%S")}] [ERROR CONNECTING WITH GSPREAD] Gspread '
+                          f'could not establish connection to google sheets...')
+                    time.sleep(4)
+                    if i == 3:
+                        print(f'[BUFFER NOT UPDATE] Could not update buffer for {self.worksheet_name.upper()} because of '
+                              f'error when connecting to google sheets API...')
+                else:
+                    break
+            print(f'\t[{self.worksheet_name.lower()} buffer] updated 💤')
 
 
 class SupportWKS(Worksheet):
