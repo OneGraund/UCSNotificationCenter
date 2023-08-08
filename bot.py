@@ -422,11 +422,14 @@ def test_bots_starting(channels_to_init):
 def start_bot_chanel_threads(channels_to_init):
     for channel_name in channels_to_init:
         bot = TelegramBot(dotenv_tokenname=channel_params[channel_name][1]).start_bot()
+        print('- '*40)
         print(f'[{utils.get_time()}] [THREAD {channel_name.upper()}] Starting thread 🔁')
         threading.Thread(target=create_telegram_channel, args=(channel_params[channel_name][0],
                                                                channel_params[channel_name][2], bot,)).start()
         print(f'\n[{utils.get_time()}]\t[THREAD {channel_name.upper()}] Started ✅✅✅')
         time.sleep(1)
+    print('='*80)
+    print(f'[{utils.get_time()}] [ALL BOT THREADS STARTED] All specified bots were started 👍')
 
 
 def input_thread():
@@ -477,3 +480,4 @@ if __name__ == '__main__':
     to_init = return_channels_to_init()
     test_bots_starting(to_init)
     start_bot_chanel_threads(to_init)
+
