@@ -3,3 +3,4 @@ service_account.json
 __pycache__/
 *.txt
 .idea/
+statistics/
