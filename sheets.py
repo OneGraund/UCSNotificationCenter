@@ -5,6 +5,7 @@ from datetime import datetime, date
 import time
 import threading
 import holidays
+import utils
 
 dotenv.load_dotenv()
 
@@ -45,10 +46,10 @@ def read_lists_from_file(filename):
 class Spreadsheet:
     def __init__(self):
         self.spreadsheet_name = os.getenv('GOOGLE_SHEETS_SPREADSHEET_NAME')
-        print(f'[SPREADSHEET {self.spreadsheet_name.upper()}] Opening spreadsheet {self.spreadsheet_name}')
+        print(f'[{utils.get_time()}] [SPREADSHEET {self.spreadsheet_name.upper()}] Opening spreadsheet {self.spreadsheet_name}')
         self.service_account = gspread.service_account('./service_account.json')
         self.spreadsheet = self.service_account.open(self.spreadsheet_name)
-        print(f'[SPREADSHEET {self.spreadsheet_name.upper()}] Spreadsheet opened successfully ✅ \n\t'
+        print(f'[{utils.get_time()}] [SPREADSHEET {self.spreadsheet_name.upper()}] Spreadsheet opened successfully ✅ \n\t'
               f'Available worksheets: ')
         for wks in self.spreadsheet.worksheets():
             print(f'\t{wks}')
@@ -57,13 +58,13 @@ class Spreadsheet:
 class Worksheet(Spreadsheet):
     def __init__(self, worksheet_name):
         super().__init__()
-        print(f'[WORKSHEET {worksheet_name.upper()}] Opening worksheet named {worksheet_name}')
+        print(f'[{utils.get_time()}] [WORKSHEET {worksheet_name.upper()}] Opening worksheet named {worksheet_name}')
         self.worksheet_name = worksheet_name
         self.worksheet = self.spreadsheet.worksheet(worksheet_name)
         self.buff = self.worksheet.get_all_values()
         write_lists_to_file(self.buff, f'{self.worksheet_name}_buff.txt')
-        print(f'[WORKSHEET {worksheet_name.upper()}] Opened worksheet and created buff in {worksheet_name}_buff.txt ✅')
-        print(f'[WORKSHEET {worksheet_name.upper()}] Starting buff updater...')
+        print(f'[{utils.get_time()}] [WORKSHEET {worksheet_name.upper()}] Opened worksheet and created buff in {worksheet_name}_buff.txt ✅')
+        print(f'[{utils.get_time()}] [WORKSHEET {worksheet_name.upper()}] Starting buff updater...')
         buff_updater_thread = threading.Thread(target=self.buff_updater, args=())
         buff_updater_thread.start()
 
@@ -77,11 +78,11 @@ class Worksheet(Spreadsheet):
             for i in range(0,5):
                 try:
                     write_lists_to_file(self.worksheet.get_all_values(), f'{self.worksheet_name}_buff.txt')
-                    connenction_eror = None
+                    connection_error = None
                 except Exception as e:
                     connection_error = str(e)
                 if connection_error:
-                    print(f'[{datetime.now().strftime("%d.%m.%Y %H:%M:%S")}] [ERROR CONNECTING WITH GSPREAD] Gspread '
+                    print(f'[{utils.get_date_and_time()}] [ERROR CONNECTING WITH GSPREAD] Gspread '
                           f'could not establish connection to google sheets...')
                     time.sleep(4)
                     if i == 3:
@@ -89,7 +90,7 @@ class Worksheet(Spreadsheet):
                               f'error when connecting to google sheets API...')
                 else:
                     break
-            print(f'\t[{self.worksheet_name.lower()} buffer] updated 💤')
+            print(f'[{utils.get_time()}]\t[{self.worksheet_name.lower()} buffer] updated 💤')
 
 
 class SupportWKS(Worksheet):
@@ -106,9 +107,9 @@ class SupportWKS(Worksheet):
                     if value[0] == datetime.now().strftime("%d-%b-%Y"):
                         at_row = row
                 self.worksheet.update(f'D{at_row}', holiday_payment)
-                print('\t[SUPPORT WORKSHEET] Today is holiday, updated payment 🎁')
+                print(f'\t[{utils.get_date_and_time()}][SUPPORT WORKSHEET] Today is holiday, updated payment 🎁')
             else:
-                print('\t[SUPPORT WORKSHEET] Today is not a holiday, therefore  I am not changing payment')
+                print(f'[{utils.get_date_and_time()}]\t[SUPPORT WORKSHEET] Today is not a holiday, therefore  I am not changing payment')
             time.sleep(24 * 60 * 60)
 
     def supporting_today(self):
@@ -143,7 +144,7 @@ class SupportDataWKS(Worksheet):
             if row[0] == '':
                 row_to_upload_num = row_id
                 break
-        print(f'[SUPPORT DATA WKS] Uploading data to row {row_to_upload_num+1}')
+        print(f'[{utils.get_date_and_time()}] [SUPPORT DATA WKS] Uploading data to row {row_to_upload_num+1}')
         row_to_upload_num=row_to_upload_num+1
         self.worksheet.update(f'A{row_to_upload_num}', person_name)
         self.worksheet.update(f'B{row_to_upload_num}', current_year)
