@@ -16,7 +16,7 @@ dotenv.load_dotenv()
 support_wks = SupportWKS()
 support_data_wks = SupportDataWKS()
 
-TEST = False
+TEST = True
 START_MUTED = True
 
 
@@ -75,7 +75,8 @@ class UCSAustriaChanel:
         threading.Thread(target=self.sender).start()
 
     def send_message(self, message_text):
-        self.bot.send_message(self.chat_id, message_text)
+
+        self.bot.send_message(self.chat_id, message_text, disable_notification=1)
 
     def sender(self):
         while True:
@@ -95,6 +96,7 @@ class TelegramChanel:
 
     def __init__(self, dotenv_name, bot, language):
         self.start_time = None
+        self.launch_time = time.time()
         self.dotenv_name = dotenv_name
         self.str_name = dotenv_name[:-7].replace('_', ' ').lower()
         self.chat_id = os.getenv(dotenv_name)
@@ -119,7 +121,14 @@ class TelegramChanel:
         self.start_monitoring()
 
     def send_message(self, message):
-        self.bot.send_message(self.chat_id, message)
+        end_time = time.time()
+        elapsed_time = end_time - self.start_time
+        hours, rem = divmod(elapsed_time, 3600)
+        minutes, seconds = divmod(rem, 60)
+        if minutes>5:
+            self.bot.send_message(self.chat_id, message, disable_notification=1)
+        else:
+            print(f'[{utils.get_time()}] [{self.str_name}] Chanel is still in init phase! Ignoring all sendings')
 
     def make_call_to(self, employee, phone):
         print(f'[{utils.get_time()}]\t[CALLING] {employee} is now beeing called on {phone} phone ⚠️')
@@ -353,11 +362,17 @@ class TelegramChanel:
                       f'discussion of problem. Doing nothing'.lower())
             # """-----------------------------------------------------------------------"""
 
+        @self.bot.message_handler(content_types=['photo'])
+        def photo_reaction(message):
+            monitor_incoming(message)
+
+
         time.sleep(2)
         if TEST:
             self.bot.polling()
         else:
             self.bot.infinity_polling()
+
 
 
 def create_telegram_channel(channel_id, language, bot):
@@ -385,8 +400,8 @@ channel_params = {
     'RelaxChanel': ('KFC_RELAX_CHAT_ID', 'UCS_Support_Relax_Bot_TELEGRAM_API_TOKEN', 'sk'),
     'LugChanel': ('KFC_LUG_CHAT_ID', 'UCS_Support_Lug_Bot_TELEGRAM_API_TOKEN', 'de'),
     'PlLinzChanel': ('KFC_PL_LINZ_CHAT_ID', 'UCS_Support_Pl_Linz_Bot_TELEGRAM_API_TOKEN', 'de'),
-    'EuropaBbChanel': ('KFC_EUROPA_BB_CHAT_ID', 'UCS_Support_Europa_Bb_Bot_TELEGRAM_API_TOKEN', 'sk')
-    #'TestChanel': ('TEST_CHAT_ID', 'UCS_Support_Bot_TELEGRAM_API_TOKEN', 'de')
+    'EuropaBbChanel': ('KFC_EUROPA_BB_CHAT_ID', 'UCS_Support_Europa_Bb_Bot_TELEGRAM_API_TOKEN', 'sk'),
+    'TestChanel': ('TEST_CHAT_ID', 'UCS_Support_Bot_TELEGRAM_API_TOKEN', 'de')
 }
 
 
