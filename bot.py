@@ -254,8 +254,11 @@ class TelegramChanel:
             if message.photo == None:
                 lowered_message = message.text.lower()
             else:
-                message.text = message.caption
-                lowered_message = message.text.lower()
+                if message.caption:
+                    message.text = message.caption
+                    lowered_message = message.text.lower()
+                else:
+                    lowered_message = ''
             print(f'[{utils.get_time()}] [{self.str_name} TELEGRAM CHANEL] Received new message, message text: '
                   f'{message.text}, from {message.from_user.username}')
 
@@ -368,11 +371,15 @@ class TelegramChanel:
                       f'discussion of problem. Doing nothing'.lower())
             # """-----------------------------------------------------------------------"""
 
-        @self.bot.message_handler(content_types=['photo'])
+        @self.bot.message_handler(content_types=['photo', 'video'])
         def photo_reaction(message):
-            print(f'[{utils.get_date_and_time()}] [{utils.get_time()}] [{self.str_name} CHANNEL] An image was sent 📸')
-            # print(message)
+            print(f'[{utils.get_date_and_time()}] [{utils.get_time()}] [{self.str_name} CHANNEL] An image '
+                  f'or video was sent 📸')
+            if not message.text:
+                message.text = ''
             monitor_incoming(message)
+
+
 
 
         time.sleep(2)
