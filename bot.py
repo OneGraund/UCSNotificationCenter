@@ -1,5 +1,6 @@
 import datetime
 import os
+import platform
 import sys
 import tkinter as tk
 import dotenv
@@ -17,9 +18,13 @@ support_wks = SupportWKS()
 support_data_wks = SupportDataWKS()
 
 TEST = True
-START_MUTED = True
+START_MUTED = False
 
-
+INIT_DELAY = None
+if TEST:
+    INIT_DELAY = 5
+else:
+    INIT_DELAY = 75
 
 class TelegramBot:
     def __init__(self, dotenv_tokenname):
@@ -106,12 +111,8 @@ class TelegramChanel:
             self.status = 'resolved'
         else:
             self.status='unknown'
+            self.send_message(f'Resolution status unknow. @vova_ucs please specify current chanel status')
         self.warning = 'no warning'
-        # self.send_message(f'Resolution status unknow. @vova_ucs please specify current chanel status')
-        if not START_MUTED:
-            self.bot.send_message(self.chat_id, text=f'Resolution status unknow. @vova_ucs '
-                                                        f'please specify current chanel status',
-                                  disable_notification=1)
         print(f'[{utils.get_time()}] [\t{self.str_name.upper()} TELEGRAM CHANEL] Initialising telegram chanel at chat {self.chat_id} '
               f'... With this params: Status={self.status}, Warning={self.warning}, Language={self.language}')
         print(
@@ -121,14 +122,8 @@ class TelegramChanel:
         self.start_monitoring()
 
     def send_message(self, message):
-        end_time = time.time()
-        elapsed_time = end_time - self.start_time
-        hours, rem = divmod(elapsed_time, 3600)
-        minutes, seconds = divmod(rem, 60)
-        if minutes>5:
-            self.bot.send_message(self.chat_id, message, disable_notification=1)
-        else:
-            print(f'[{utils.get_time()}] [{self.str_name}] Chanel is still in init phase! Ignoring all sendings')
+        print(f'[{utils.get_time()}] [{self.str_name} CHANNEL] Sending this message to chanel: 💬⬆️\n\t{message}')
+        self.bot.send_message(self.chat_id, message, disable_notification=START_MUTED)
 
     def make_call_to(self, employee, phone):
         print(f'[{utils.get_time()}]\t[CALLING] {employee} is now beeing called on {phone} phone ⚠️')
@@ -256,9 +251,20 @@ class TelegramChanel:
 
         @self.bot.message_handler(func=lambda message: True)
         def monitor_incoming(message):
-            lowered_message = message.text.lower()
+            if message.photo == None:
+                lowered_message = message.text.lower()
+            else:
+                message.text = message.caption
+                lowered_message = message.text.lower()
             print(f'[{utils.get_time()}] [{self.str_name} TELEGRAM CHANEL] Received new message, message text: '
                   f'{message.text}, from {message.from_user.username}')
+
+            # Check whether the actuation time has been elapsed to fight with issue #2
+            if (time.time() - self.launch_time) <= INIT_DELAY:
+                print(f'[{utils.get_time()}] [{self.str_name} CHANEL] Initialisation not yet complete. ⏰'
+                      f'\n\t[REMAINING FOR INIT] {INIT_DELAY - (time.time() - self.launch_time)}')
+                return  # If bot was started less than a minute ago
+
             # """-------------Change status of telegram chanel from unknown-------------"""
             if is_from_ucs(message) and self.status == 'unknown':
                 for status in TelegramChanel.statuses:
@@ -364,6 +370,8 @@ class TelegramChanel:
 
         @self.bot.message_handler(content_types=['photo'])
         def photo_reaction(message):
+            print(f'[{utils.get_date_and_time()}] [{utils.get_time()}] [{self.str_name} CHANNEL] An image was sent 📸')
+            # print(message)
             monitor_incoming(message)
 
 
@@ -490,8 +498,9 @@ def input_thread():
 
 
 if __name__ == '__main__':
-    input_thread = threading.Thread(target=input_thread)
-    input_thread.start()
+    if platform.system()=='Windows':
+        input_thread = threading.Thread(target=input_thread)
+        input_thread.start()
     to_init = return_channels_to_init()
     test_bots_starting(to_init)
     start_bot_chanel_threads(to_init)
