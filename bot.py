@@ -384,7 +384,11 @@ class TelegramChanel:
 
         time.sleep(2)
         if TEST:
-            self.bot.polling()
+            try:
+                self.bot.polling()
+                print('Polling good...')
+            except:
+                print(f'[{utils.get_date_and_time()}] [{self.str_name}] Polling bad... ‼️ TELEGRAM API ISSUE ‼️')
         else:
             self.bot.infinity_polling()
 
