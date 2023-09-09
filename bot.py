@@ -17,8 +17,8 @@ dotenv.load_dotenv()
 support_wks = SupportWKS()
 support_data_wks = SupportDataWKS()
 
-TEST = True
-START_MUTED = False
+TEST = False
+START_MUTED = True
 
 INIT_DELAY = None
 if TEST:
@@ -37,7 +37,6 @@ class TelegramBot:
         self.bot = telebot.TeleBot(self.API_KEY)
         print(f'[{utils.get_time()}] [TELEGRAM BOT {self.dotenv_tokenname}] Telegram bot started! ✔')
         return self.bot
-
 
 def is_from_ucs(message):
     if message.from_user.username == os.getenv('ALEX_TELEGRAM_USERNAME'):
@@ -75,8 +74,8 @@ class UCSAustriaChanel:
         self.bot = bot
         to_send = ''
         for init in inits:
-            to_send += f'{init}\n'
-        self.send_message(f'UCS Notification Center has started for this chanels:\n{to_send}')
+            to_send += f'\n{init} ✅'
+        self.send_message(f'Сперма разливается на этих кАНАЛАХ:{to_send}')
         threading.Thread(target=self.sender).start()
 
     def send_message(self, message_text):
@@ -339,7 +338,7 @@ class TelegramChanel:
                     else:
                         elapsed = "{} seconds".format(int(seconds))
                     self.send_message(f'Issue resolved by {is_from_ucs(message)} in {elapsed}')
-                    rp_time = end_time - self.response_time
+                    rp_time = self.response_time - self.start_time
                     print(f"[{utils.get_time()}] [{self.str_name.upper()} TG CHANEL] {is_from_ucs(message)} resolved "
                           f"issue in {elapsed}")
                     support_data_wks.upload_issue_data(
@@ -386,9 +385,9 @@ class TelegramChanel:
 
         try:
             if TEST:
-                self.bot.polling()
+                self.bot.infinity_polling(timeout=10, long_polling_timeout = 5)
             else:
-                self.bot.infinity_polling()
+                self.bot.infinity_polling(timeout=10, long_polling_timeout = 5)
             print('Polling good...')
         except:
             print(f'[{utils.get_date_and_time()}] [{self.str_name}] Polling bad... ‼️ TELEGRAM API ISSUE ‼️')
@@ -517,4 +516,5 @@ if __name__ == '__main__':
     to_init = return_channels_to_init()
     test_bots_starting(to_init)
     start_bot_chanel_threads(to_init)
-
+    if not TEST:
+        UCSAustriaChanel(telebot.TeleBot(os.getenv("UCS_Support_Bot_TELEGRAM_API_TOKEN")), to_init)
