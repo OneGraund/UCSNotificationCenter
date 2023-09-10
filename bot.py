@@ -382,7 +382,7 @@ class TelegramChanel:
 
 
         time.sleep(2)
-
+        # Fixing of polling
         try:
             if TEST:
                 self.bot.infinity_polling(timeout=10, long_polling_timeout = 5)
