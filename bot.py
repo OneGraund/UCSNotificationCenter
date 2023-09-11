@@ -32,7 +32,7 @@ class TelegramBot:
         self.dotenv_tokenname = dotenv_tokenname
         self.API_KEY = os.getenv(dotenv_tokenname)
         print(f'[{utils.get_time()}] [TELEGRAM BOT] Starting telegram bot with api token {dotenv_tokenname} in .env file...')
-
+ 
     def start_bot(self):
         self.bot = telebot.TeleBot(self.API_KEY)
         print(f'[{utils.get_time()}] [TELEGRAM BOT {self.dotenv_tokenname}] Telegram bot started! ✔')
@@ -84,9 +84,13 @@ class UCSAustriaChanel:
 
     def sender(self):
         while True:
-            if datetime.datetime.now().strftime("%H:%M:%S")=='08:00:00':
+            hh_mm_ss_formattime_now = datetime.datetime.now().strftime("%H:%M:%S")=='08:00:00'
+            if hh_mm_ss_formattime_now=='08:00:00':
                 to_p = os.getenv(support_wks.supporting_today().upper() + '_TELEGRAM_USERNAME')
                 self.send_message(f'SH reminder @{to_p}')
+            elif hh_mm_ss_formattime_now == '23:59:00':
+                result = support_data_wks.today_results()
+                self.send_message(f'Results for supporting today:')
             time.sleep(1)
 
 
