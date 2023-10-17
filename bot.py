@@ -9,6 +9,7 @@ import time
 import utils
 import telebot
 from sheets import SupportWKS, SupportDataWKS
+import sip_call
 from tkinter import font
 from sip_call import call_employee
 
@@ -17,8 +18,10 @@ dotenv.load_dotenv()
 support_wks = SupportWKS()
 support_data_wks = SupportDataWKS()
 
-TEST = False
+TEST = True
 START_MUTED = True
+REQUEST_ERROR_RESOLUTION = False
+NOTIFY_UCS_ON_START = False
 
 INIT_DELAY = None
 if TEST:
@@ -31,7 +34,8 @@ class TelegramBot:
         self.bot = None
         self.dotenv_tokenname = dotenv_tokenname
         self.API_KEY = os.getenv(dotenv_tokenname)
-        print(f'[{utils.get_time()}] [TELEGRAM BOT] Starting telegram bot with api token {dotenv_tokenname} in .env file...')
+        print(f'[{utils.get_time()}] [TELEGRAM BOT] Starting telegram bot with api token {dotenv_tokenname} '
+              f'in .env file...')
  
     def start_bot(self):
         self.bot = telebot.TeleBot(self.API_KEY)
@@ -47,8 +51,8 @@ def is_from_ucs(message):
     elif message.from_user.username == os.getenv('VOVA_TELEGRAM_USERNAME') or \
             message.from_user.username == os.getenv('VOVA_SECOND_TELEGRAM_USERNAME'):
         return 'Vova'
-    elif message.from_user.username == os.getenv('YARO_TELEGRAM_USERNAME'):
-        return 'Yaro'
+    elif message.from_user.username == os.getenv('Ivan_TELEGRAM_USERNAME'):
+        return 'Ivan'
     else:
         return False
 
@@ -58,8 +62,14 @@ def is_thank_you(message):
     thank_you_messages = (
         'thanks', 'thank', 'danke', 'dank'
     )
-    for msg in thank_you_messages:
-        if msg in lowered:
+    greetings_messages = (
+        'hi', 'hello', 'hallo', 'hey'
+    )
+    for th_msg in thank_you_messages:
+        if th_msg in lowered:
+            for gr_msg in greetings_messages:
+                if gr_msg in lowered:
+                    return False
             return True
     return False
 
@@ -70,17 +80,67 @@ def is_resolution_message(message):
 
 class UCSAustriaChanel:
     def __init__(self, bot, inits):
-        self.chat_id = os.getenv('UCS_AUSTRIA_CHAT_ID')
+        if not TEST:
+            self.chat_id = os.getenv('UCS_AUSTRIA_CHAT_ID')
+        else:
+            self.chat_id = os.getenv('TEST_UCS_SUPPORT_CHAT_ID')
         self.bot = bot
+        self.launch_time = time.time()
         to_send = ''
+        self.sent_messages = []
         for init in inits:
-            to_send += f'\n{init} ✅'
-        self.send_message(f'Сперма разливается на этих кАНАЛАХ:{to_send}')
+            to_send += f'\n✅{init}'
+        if NOTIFY_UCS_ON_START:
+            self.send_message(f'Бот запущен на этих каналах:{to_send}')
+            self.send_message(f'Сегодня сапортит {support_wks.supporting_today()}')
+            device_info = utils.get_device_info()
+            del to_send
+            to_send = 'Device info:'
+            for key, value in device_info.items():
+                to_send = to_send + f"\n{key}: {value}"
+            self.send_message(to_send)
         threading.Thread(target=self.sender).start()
 
     def send_message(self, message_text):
-
         self.bot.send_message(self.chat_id, message_text, disable_notification=1)
+
+    def request_problem_resoluion_codes(self, row, employee, restaurant_name):
+        def check_for_replies(id, stop_event):
+            while not stop_event.is_set():
+                try:
+                    updates = self.bot.get_updates()
+                    for update in updates:
+                        if update.message and update.message.reply_to_message:
+                            if update.message.reply_to_message.message_id == id:
+                                print(f'[{utils.get_date_and_time()}] Reply to issue {id} received')
+                                stop_event.set()
+                                error_code = update.message.text.split(' ')[0]
+                                resol_code = update.message.text.split(' ')[1]
+                                support_data_wks.update_problem_resolution_codes(row, error_code, resol_code)
+                                self.send_message(f'Reply to issue {id} received and updated')
+                            else:
+                                print(f'This was a reply but not to correct message'
+                                      f'\nupdate.message.reply_to_message.message_id = '
+                                      f'{update.message.reply_to_message.message_id}\n'
+                                      f'ID - {id}')
+                except Exception as e:
+                    print(f'Error {e}!!!')
+
+        if (time.time() - self.launch_time) <= INIT_DELAY:
+            print(f'[{utils.get_time()}] [UCS MAIN CHANEL] Initialisation not yet complete. ⏰'
+                  f'\n\t[REMAINING FOR INIT] {INIT_DELAY - (time.time() - self.launch_time)}')
+            return  # If bot was started less than a minute ago
+        self.sent_messages.append(
+            (self.bot.send_message(chat_id = self.chat_id, text = f'{employee}, please specify '
+                                 f'problem code and resolution code '
+                                f'for issue that you resolved in {restaurant_name}').message_id))
+        stop_event = threading.Event()
+        threading.Thread(target=check_for_replies,
+                         args=(self.sent_messages[len(self.sent_messages)-1],
+                               stop_event,)).start()
+
+
+
 
     def sender(self):
         while True:
@@ -96,13 +156,13 @@ class UCSAustriaChanel:
 
 class TelegramChanel:
     statuses = (
-        'resolved', 'unresolved', 'unknown'
+        'resolved', 'unresolved', 'unknown', 'locked'
     )
     warnings = (
         'warning1', 'warning2', 'warning3', 'warning4', 'warning5', 'no warning'
     )
 
-    def __init__(self, dotenv_name, bot, language):
+    def __init__(self, dotenv_name, bot, language, main_chanel):
         self.start_time = None
         self.launch_time = time.time()
         self.dotenv_name = dotenv_name
@@ -110,6 +170,7 @@ class TelegramChanel:
         self.chat_id = os.getenv(dotenv_name)
         self.bot = bot
         self.language = language
+        self.main_chanel = main_chanel
         if len(sys.argv) > 1 and sys.argv[1] == 'updated':
             self.status = 'resolved'
         else:
@@ -151,48 +212,52 @@ class TelegramChanel:
                 'warning4': 8,
                 'warning5': 10
             }
-        while not stop_event.is_set():
-            time.sleep(1)
-            seconds_elapsed += 1
-            if seconds_elapsed == timings['warning1']:
-                print(f'[{utils.get_time()}] [{self.str_name.upper()} NEW WARNING STATUS] Changing warning '
-                      f'status to warning 1 and calling responsible employee')
-                self.warning = 'warning1'
-                # Call responsible
-                self.make_call_to(employee='main', phone='main')
+        try:
+            while not stop_event.is_set():
+                time.sleep(1)
+                seconds_elapsed += 1
+                if seconds_elapsed == timings['warning1']:
+                    print(f'[{utils.get_time()}] [{self.str_name.upper()} NEW WARNING STATUS] Changing warning '
+                          f'status to warning 1 and calling responsible employee')
+                    self.warning = 'warning1'
+                    # Call responsible
+                    self.make_call_to(employee='main', phone='main')
 
-            elif seconds_elapsed == timings['warning2']:
-                print(f'[{utils.get_time()}] [{self.str_name.upper()} NEW WARNING STATUS] Changing warning '
-                      f'status to warning 2 and calling responsible second cellphone, pinging another responsible')
-                self.warning = 'warning2'
-                # Call seconds cellphone (if exists), ping another support employee
-                self.ping_second_responsible()
-                self.make_call_to('main', 'second')
+                elif seconds_elapsed == timings['warning2']:
+                    print(f'[{utils.get_time()}] [{self.str_name.upper()} NEW WARNING STATUS] Changing warning '
+                          f'status to warning 2 and calling responsible second cellphone, pinging another responsible')
+                    self.warning = 'warning2'
+                    # Call seconds cellphone (if exists), ping another support employee
+                    self.ping_second_responsible()
+                    self.make_call_to('main', 'second')
 
-            elif seconds_elapsed == timings['warning3']:
-                print(f'[{utils.get_time()}] [{self.str_name.upper()} NEW WARNING STATUS] Changing warning '
-                      f'status to warning 3 and calling second employee')
-                self.warning = 'warning3'
-                # Call second employee, ping third
-                self.ping_third_responsible()
-                self.make_call_to('second', 'main')
+                elif seconds_elapsed == timings['warning3']:
+                    print(f'[{utils.get_time()}] [{self.str_name.upper()} NEW WARNING STATUS] Changing warning '
+                          f'status to warning 3 and calling second employee')
+                    self.warning = 'warning3'
+                    # Call second employee, ping third
+                    self.ping_third_responsible()
+                    self.make_call_to('second', 'main')
 
-            elif seconds_elapsed == timings['warning4']:
-                print(f'[{utils.get_time()}] [{self.str_name.upper()} NEW WARNING STATUS] Changing warning '
-                      f'status to warning 4 and pinging Alex')
-                print(f'\t[PINGING] Alex has been pinged')
-                self.warning = 'warning4'
-                # Ping Alex
-                self.send_message("@" + os.getenv('ALEX_TELEGRAM_USERNAME'))
+                elif seconds_elapsed == timings['warning4']:
+                    print(f'[{utils.get_time()}] [{self.str_name.upper()} NEW WARNING STATUS] Changing warning '
+                          f'status to warning 4 and pinging Alex')
+                    print(f'\t[PINGING] Alex has been pinged')
+                    self.warning = 'warning4'
+                    # Ping Alex
+                    self.send_message("@" + os.getenv('ALEX_TELEGRAM_USERNAME'))
 
-            elif seconds_elapsed == timings['warning5']:
-                print(f'[{utils.get_time()}] [{self.str_name.upper()} NEW WARNING STATUS] Changing warning'
-                      f' status to warning 5 and calling Alex')
-                self.warning = 'warning5'
-                # Call Alex
-                self.make_call_to('Alex', 'main phone')
-                print(f'[{utils.get_time()}] \t[FINAL WARNING ❌] This was last warning. Exiting warning thread... ⚠️')
-                stop_event.set()
+                elif seconds_elapsed == timings['warning5']:
+                    print(f'[{utils.get_time()}] [{self.str_name.upper()} NEW WARNING STATUS] Changing warning'
+                          f' status to warning 5 and calling Alex')
+                    self.warning = 'warning5'
+                    # Call Alex
+                    self.make_call_to('Alex', 'main phone')
+                    print(f'[{utils.get_time()}] \t[FINAL WARNING ❌] This was last warning. Exiting warning thread... ⚠️')
+                    stop_event.set()
+        except Exception as e:
+            print(f'[{utils.get_date_and_time()}] [WARNING ISSUE THREAD] An error occured when running issue thread: '
+                  f'{e}')
 
     def ping_responsible(self):
         to_ping_str = support_wks.supporting_today()
@@ -209,12 +274,12 @@ class TelegramChanel:
                     f"@{os.getenv('VOVA_TELEGRAM_USERNAME')} @{os.getenv('VOVA_SECOND_TELEGRAM_USERNAME')}")
             else:
                 self.send_message(f"@{os.getenv('VOVA_TELEGRAM_USERNAME')}")
-        elif to_ping_str == 'Yaro':
-            if os.getenv("YARO_SECOND_TELEGRAM_USERNAME") != '':
+        elif to_ping_str == 'Ivan':
+            if os.getenv("Ivan_SECOND_TELEGRAM_USERNAME") != '':
                 self.send_message(
-                    f"@{os.getenv('YARO_TELEGRAM_USERNAME')} @{os.getenv('YARO_SECOND_TELEGRAM_USERNAME')}")
+                    f"@{os.getenv('Ivan_TELEGRAM_USERNAME')} @{os.getenv('Ivan_SECOND_TELEGRAM_USERNAME')}")
             else:
-                self.send_message(f"@{os.getenv('YARO_TELEGRAM_USERNAME')}")
+                self.send_message(f"@{os.getenv('Ivan_TELEGRAM_USERNAME')}")
 
     def ping_second_responsible(self):
         supporter = support_wks.supporting_today()
@@ -223,7 +288,7 @@ class TelegramChanel:
             to_ping_str = 'Vova'
         elif supporter == 'Vova':
             to_ping_str = 'Egor'
-        elif supporter == 'Yaro':
+        elif supporter == 'Ivan':
             to_ping_str = 'Egor'
         if os.getenv(f'{to_ping_str.upper()}_SECOND_TELEGRAM_USERNAME') != '':
             self.send_message(f"@{os.getenv(f'{to_ping_str.upper()}_TELEGRAM_USERNAME')} "
@@ -236,10 +301,10 @@ class TelegramChanel:
         supporter = support_wks.supporting_today()
         to_ping_str = None
         if supporter == 'Egor':
-            to_ping_str = 'Yaro'
+            to_ping_str = 'Ivan'
         elif supporter == 'Vova':
-            to_ping_str = 'Yaro'
-        elif supporter == 'Yaro':
+            to_ping_str = 'Ivan'
+        elif supporter == 'Ivan':
             to_ping_str = 'Vova'
         if os.getenv(f'{to_ping_str.upper()}_SECOND_TELEGRAM_USERNAME') != '':
             self.send_message(f"@{os.getenv(f'{to_ping_str.upper()}_TELEGRAM_USERNAME')} "
@@ -270,6 +335,13 @@ class TelegramChanel:
                 print(f'[{utils.get_time()}] [{self.str_name} CHANEL] Initialisation not yet complete. ⏰'
                       f'\n\t[REMAINING FOR INIT] {INIT_DELAY - (time.time() - self.launch_time)}')
                 return  # If bot was started less than a minute ago
+
+            # Update chat_id and .env file
+            if self.chat_id!=message.chat.id:
+                print(f'[{utils.get_time()} {self.str_name.upper()} TG CHANEL] Difference in chat_id!!!\n'
+                      f'\t.env file shows -- {self.chat_id}, actual from message.chat_id -- {message.chat.id}')
+                self.chat_id=message.chat.id
+
 
             # """-------------Change status of telegram chanel from unknown-------------"""
             if is_from_ucs(message) and self.status == 'unknown':
@@ -302,14 +374,21 @@ class TelegramChanel:
                 self.warning_thread.start()
             # """-----------------------------------------------------------------------"""
 
-            # """----------------Not an issue. False creation of issue------------------"""
-            elif is_from_ucs(message) and lowered_message == 'not an issue':
+            # """----------------Not an issue. Locking chanel for discussion------------------"""
+            elif is_from_ucs(message) and (lowered_message == 'not an issue' or lowered_message == 'lock'):
                 # or 'kein problem' in lowered_message:
-                self.status = 'resolved'
+                self.status = 'locked'
                 self.stop_event.set()
                 self.warning = 'no warning'
-                print(f'[{utils.get_time()}] [{self.str_name.upper()} TG CHANEL] false issue. Setting to resolved :|')
-                self.send_message('Okay, removing issue. Status is now resolved')
+                print(f'[{utils.get_time()}] [{self.str_name.upper()} TG CHANEL] false issue. Setting to locked :|')
+                self.send_message('Okay, removing issue. Locking bot for further discussion. Type "Unlock" to unlock')
+            # """-----------------------------------------------------------------------"""
+
+            # """-----------------Unlocking chanel--------------------------------------"""
+            elif is_from_ucs(message) and lowered_message == 'unlock' and self.status == 'locked':
+                self.status = 'resolved'
+                print(f'[{utils.get_time()} [{self.str_name.upper()} TG CHANEL] unlocking chanel for further monitor')
+                self.send_message('Chanel unlocked, continuing monitoring')
             # """-----------------------------------------------------------------------"""
 
             # """-------------Remove warning, but leave unresolved status---------------"""
@@ -341,15 +420,21 @@ class TelegramChanel:
                         elapsed = "{} minutes {} seconds".format(int(minutes), int(seconds))
                     else:
                         elapsed = "{} seconds".format(int(seconds))
+                    if is_from_ucs(message).lower()=='Ivan':
+                        resolved_by = 'Ivan'
+                    else:
+                        resolved_by = is_from_ucs(message)
                     self.send_message(f'Issue resolved by {is_from_ucs(message)} in {elapsed}')
                     rp_time = self.response_time - self.start_time
                     print(f"[{utils.get_time()}] [{self.str_name.upper()} TG CHANEL] {is_from_ucs(message)} resolved "
                           f"issue in {elapsed}")
-                    support_data_wks.upload_issue_data(
+                    row = support_data_wks.upload_issue_data(
                         response_time=rp_time, resolution_time=elapsed_time,
                         person_name=is_from_ucs(message), restaurant_name=self.str_name,
                         warning_status=self.responsed_at_warning_level
                     )
+                    if REQUEST_ERROR_RESOLUTION:
+                        self.main_chanel.request_problem_resoluion_codes(row, is_from_ucs(message), self.str_name)
                     to_append = f'{datetime.datetime.now().strftime("%A, %dth %B, %H:%M:%S")} issue resolved by ' \
                                 f' {is_from_ucs(message)} in ' \
                                 f'{elapsed_time} seconds. Response time: {end_time - self.response_time}\n'
@@ -359,8 +444,8 @@ class TelegramChanel:
                     elif is_from_ucs(message).lower()=='egor':
                         with open('statistics/egor.txt', 'a') as f:
                             f.write(to_append)
-                    elif is_from_ucs(message).lower()=='yaro':
-                        with open('statistics/yaro.txt') as f:
+                    elif is_from_ucs(message).lower()=='Ivan':
+                        with open('statistics/Ivan.txt') as f:
                             f.write(to_append)
                 else:
                     print(f"[{utils.get_time()}] [{self.str_name.upper()} TG CHANEL] {is_from_ucs(message)} "
@@ -382,25 +467,11 @@ class TelegramChanel:
                 message.text = ''
             monitor_incoming(message)
 
+        self.bot.polling(non_stop=True)
 
 
-
-        time.sleep(2)
-        # Fixing of polling
-        try:
-            if TEST:
-                self.bot.infinity_polling(timeout=10, long_polling_timeout = 5)
-            else:
-                self.bot.infinity_polling(timeout=10, long_polling_timeout = 5)
-            print('Polling good...')
-        except:
-            print(f'[{utils.get_date_and_time()}] [{self.str_name}] Polling bad... ‼️ TELEGRAM API ISSUE ‼️')
-
-
-
-
-def create_telegram_channel(channel_id, language, bot):
-    return TelegramChanel(channel_id, bot, language)
+def create_telegram_channel(channel_id, language, bot, main_chanel):
+    return TelegramChanel(channel_id, bot, language, main_chanel)
 
 
 channel_params = {
@@ -420,11 +491,13 @@ channel_params = {
     'MhsChanel': ('KFC_MHS_CHAT_ID', 'UCS_Support_Mhs_Bot_TELEGRAM_API_TOKEN', 'de'),
     'ParChanel': ('KFC_PAR_CHAT_ID', 'UCS_Support_Par_Bot_TELEGRAM_API_TOKEN', 'de'),
     'ColChanel': ('KFC_COL_CHAT_ID', 'UCS_Support_Col_Bot_TELEGRAM_API_TOKEN', 'de'),
+    'ColChanel': ('KFC_COL_CHAT_ID', 'UCS_Support_Col_Bot_TELEGRAM_API_TOKEN', 'de'),
     'VivoChanel': ('KFC_VIVO_CHAT_ID', 'UCS_Support_Vivo_Bot_TELEGRAM_API_TOKEN', 'sk'),
     'RelaxChanel': ('KFC_RELAX_CHAT_ID', 'UCS_Support_Relax_Bot_TELEGRAM_API_TOKEN', 'sk'),
     'LugChanel': ('KFC_LUG_CHAT_ID', 'UCS_Support_Lug_Bot_TELEGRAM_API_TOKEN', 'de'),
     'PlLinzChanel': ('KFC_PL_LINZ_CHAT_ID', 'UCS_Support_Pl_Linz_Bot_TELEGRAM_API_TOKEN', 'de'),
     'EuropaBbChanel': ('KFC_EUROPA_BB_CHAT_ID', 'UCS_Support_Europa_Bb_Bot_TELEGRAM_API_TOKEN', 'sk'),
+    'ZvonlenChanel': ('KFC_ZVLN_CHAT_ID', 'UCS_Support_Zvln_Bot_TELEGRAM_API_TOKEN', 'sk'),
     'TestChanel': ('TEST_CHAT_ID', 'UCS_Support_Bot_TELEGRAM_API_TOKEN', 'de')
 }
 
@@ -458,13 +531,14 @@ def test_bots_starting(channels_to_init):
     return start_failed
 
 
-def start_bot_chanel_threads(channels_to_init):
+def start_bot_chanel_threads(channels_to_init, main_chanel):
     for channel_name in channels_to_init:
         bot = TelegramBot(dotenv_tokenname=channel_params[channel_name][1]).start_bot()
         print('- '*40)
         print(f'[{utils.get_time()}] [THREAD {channel_name.upper()}] Starting thread 🔁')
         threading.Thread(target=create_telegram_channel, args=(channel_params[channel_name][0],
-                                                               channel_params[channel_name][2], bot,)).start()
+                                                               channel_params[channel_name][2],
+                                                               bot, main_chanel)).start()
         print(f'\n[{utils.get_time()}]\t[THREAD {channel_name.upper()}] Started ✅✅✅')
         time.sleep(1)
     print('='*80)
@@ -518,7 +592,15 @@ if __name__ == '__main__':
         input_thread = threading.Thread(target=input_thread)
         input_thread.start()
     to_init = return_channels_to_init()
-    test_bots_starting(to_init)
-    start_bot_chanel_threads(to_init)
+
+    # Initialise cellphone calling server that communicates later with android client
+    call_server = threading.Thread(target=sip_call.start_telephony_server)
+    # call_server.start()
+
+    ucs_chanel = None
     if not TEST:
-        UCSAustriaChanel(telebot.TeleBot(os.getenv("UCS_Support_Bot_TELEGRAM_API_TOKEN")), to_init)
+        ucs_chanel = UCSAustriaChanel(telebot.TeleBot(os.getenv("UCS_Support_Bot_TELEGRAM_API_TOKEN")), to_init)
+    else:
+        ucs_chanel = UCSAustriaChanel(telebot.TeleBot(os.getenv("TEST_UCS_SUPPORT_Bot_TELEGRAM_API_TOKEN")), to_init)
+    test_bots_starting(to_init)
+    start_bot_chanel_threads(to_init, ucs_chanel)

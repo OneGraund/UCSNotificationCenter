@@ -128,10 +128,16 @@ class SupportDataWKS(Worksheet):
     def __init__(self):
         super().__init__(os.getenv('GOOGLE_SHEETS_SUPPORTDATA_WORKSHEET_NAME'))
 
+    def update_problem_resolution_codes(self, row_to_upload, error_code, resol_code):
+        print(f'[SHEETS] [{utils.get_time()}] Received error code and resolution code for row {row_to_upload},'
+              f' error code - {error_code}, resol_code - {resol_code}. Uploading...')
+        self.worksheet.update(f'H{row_to_upload}', error_code)
+        self.worksheet.update(f'I{row_to_upload}', resol_code)
+
     def upload_issue_data(self, response_time, resolution_time, person_name, restaurant_name, warning_status,
                           problem_code=None, resolution_code=None):
-        if person_name == 'Yaro':  # because in google sheets always Yaroslav
-            person_name = 'Yaroslav'
+        if person_name == 'Ivan':  # because in google sheets always Ivan
+            person_name = 'Ivan'
         current_datetime = datetime.now()
         current_month = current_datetime.strftime('%m')
         current_day = current_datetime.strftime('%d')
@@ -157,6 +163,8 @@ class SupportDataWKS(Worksheet):
         self.worksheet.update(f'I{row_to_upload_num}', resolution_code)
         self.worksheet.update(f'J{row_to_upload_num}', restaurant_name)
         self.worksheet.update(f'K{row_to_upload_num}', warning_status)
+
+        return row_to_upload_num
 
 
 
