@@ -56,8 +56,10 @@ class Spreadsheet:
 
 
 class Worksheet(Spreadsheet):
-    def __init__(self, worksheet_name):
+    def __init__(self, worksheet_name, UPD_INTERVAL=5, OUTPUT_UPDATES=True):
         super().__init__()
+        self.OUTPUT_UPDATES = OUTPUT_UPDATES
+        self.UPD_INTERVAL = UPD_INTERVAL
         print(f'[{utils.get_time()}] [WORKSHEET {worksheet_name.upper()}] Opening worksheet named {worksheet_name}')
         self.worksheet_name = worksheet_name
         self.worksheet = self.spreadsheet.worksheet(worksheet_name)
@@ -74,7 +76,7 @@ class Worksheet(Spreadsheet):
     def buff_updater(self):
         print(f'[{self.worksheet_name.upper()} BUFFER UPDATER] Buffer updater is started and regularly updates .txt ✅')
         while True:
-            time.sleep(60 * 5)
+            time.sleep(60 * self.UPD_INTERVAL)
             for i in range(0,5):
                 try:
                     write_lists_to_file(self.worksheet.get_all_values(), f'{self.worksheet_name}_buff.txt')
@@ -90,12 +92,16 @@ class Worksheet(Spreadsheet):
                               f'error when connecting to google sheets API...')
                 else:
                     break
-            print(f'[{utils.get_time()}]\t[{self.worksheet_name.lower()} buffer] updated 💤')
+            if self.OUTPUT_UPDATES:
+                print(f'[{utils.get_time()}]\t[{self.worksheet_name.lower()} buffer] updated 💤')
 
 
 class SupportWKS(Worksheet):
-    def __init__(self):
-        super().__init__(os.getenv('GOOGLE_SHEETS_SUPPORT_WORKSHEET_NAME'))
+    def __init__(self, UPD_INTERVAL=5, OUTPUT_UPDATES=True):
+        super().__init__(
+            os.getenv('GOOGLE_SHEETS_SUPPORT_WORKSHEET_NAME'),
+            UPD_INTERVAL=UPD_INTERVAL, OUTPUT_UPDATES=OUTPUT_UPDATES
+        )
         threading.Thread(target=self.update_holiday_payment).start()
 
     def update_holiday_payment(self):
@@ -125,13 +131,25 @@ class SupportWKS(Worksheet):
 
 
 class SupportDataWKS(Worksheet):
-    def __init__(self):
-        super().__init__(os.getenv('GOOGLE_SHEETS_SUPPORTDATA_WORKSHEET_NAME'))
+    def __init__(self, UPD_INTERVAL=5, OUTPUT_UPDATES=True):
+        super().__init__(
+            os.getenv('GOOGLE_SHEETS_SUPPORTDATA_WORKSHEET_NAME'),
+            UPD_INTERVAL=UPD_INTERVAL, OUTPUT_UPDATES=OUTPUT_UPDATES
+        )
+
+    def today_results(self):
+        pass
+
+    def update_problem_resolution_codes(self, row_to_upload, error_code, resol_code):
+        print(f'[SHEETS] [{utils.get_time()}] Received error code and resolution code for row {row_to_upload},'
+              f' error code - {error_code}, resol_code - {resol_code}. Uploading...')
+        self.worksheet.update(f'H{row_to_upload}', error_code)
+        self.worksheet.update(f'I{row_to_upload}', resol_code)
 
     def upload_issue_data(self, response_time, resolution_time, person_name, restaurant_name, warning_status,
                           problem_code=None, resolution_code=None):
-        if person_name == 'Yaro':  # because in google sheets always Yaroslav
-            person_name = 'Yaroslav'
+        if person_name == 'Ivan':  # because in google sheets always Ivan
+            person_name = 'Ivan'
         current_datetime = datetime.now()
         current_month = current_datetime.strftime('%m')
         current_day = current_datetime.strftime('%d')
@@ -158,9 +176,4 @@ class SupportDataWKS(Worksheet):
         self.worksheet.update(f'J{row_to_upload_num}', restaurant_name)
         self.worksheet.update(f'K{row_to_upload_num}', warning_status)
 
-
-
-
-if __name__ == '__main__':
-    support_wks = SupportWKS()
-    print(support_wks.supporting_today())
+        return row_to_upload_num
