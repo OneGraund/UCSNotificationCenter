@@ -1,15 +1,8 @@
 @echo off
 
-REM Kill the running Python script
 taskkill /IM python.exe /F
-
-cd C:\ucs\UCSNotificationCenter
-
-REM Update files from Git repository
-git pull origin main
-
-REM Install libraries from requirements.txt
-pip install -r requirements.txt
-
-REM Start the Python script and close the console window
-start "" /B python bot.py updated
+REM Starting bot.py pyton script with all bots...
+cd C:\Users\Rkeeper\UCSNotificationCenter
+git pull
+git install -r requirements.txt
+start "" /B python main.py --disable_notifications --notify_on_start --wks_upd_interval 2 --wks_output_upd
