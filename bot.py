@@ -1,4 +1,5 @@
 import datetime
+import logging
 import os
 import dotenv
 import threading
@@ -19,12 +20,30 @@ class TelegramBot:
               f'in .env file...')
 
     def start_bot(self):
-        self.bot = telebot.TeleBot(self.API_KEY)
+        self.bot = telebot.TeleBot(self.API_KEY, threaded = True)
+        # telebot.logger.setLevel(logging.DEBUG)
         print(f'[{utils.get_time()}] [TELEGRAM BOT {self.dotenv_tokenname}] Telegram bot started! ✔')
         return self.bot
 
 
-def is_from_ucs(message):
+def is_from_ucs(message, employees=None):
+    # First we want to parse all employes telegram usernames in format of arrays, where main array contains
+    # subarrays even if employe has only one telegram username
+    # employes: [Vova, Egor, Yaro, Ivan, Igor, Alex] -> tg_usernames: [[vova_ucs, onegraund], [noname, egor_ucs], …]
+
+    """if employees:
+        tg_names = []
+        for employee in employees:
+            if os.getenv(f'{employee.upper()}_SECOND_TELEGRAM_USERNAME')!='':
+                tg_names.append([os.getenv(f"{employee.upper()}_TELEGRAM_USERNAME"),
+                                 os.getenv(f"{employee.upper()}_SECOND_TELEGRAM_USERNAME")])
+            else:
+                tg_names.append([os.getenv(f"{employee.uppe()}_TELEGRAM_USERNAME")])
+        for tg_username in tg_names:
+            for sub_array in tg_username:
+                if message.from_user.username == sub_array:
+                    return """
+
     if message.from_user.username == os.getenv('ALEX_TELEGRAM_USERNAME'):
         return 'Alex'
     elif message.from_user.username == os.getenv('EGOR_TELEGRAM_USERNAME') or \
@@ -302,35 +321,12 @@ class TelegramChanel:
 
             return None in case we run out of priorities and writes that to console
         """
-        if priority == 0:
-            self.ping(self.employees[0])
-        elif priority <= (len(self.employees) - 1):
+        if priority <= (len(self.employees) - 1):
             self.ping(self.employees[priority])
         else:
             print(f'[{utils.get_date_and_time()}] [{self.str_name.upper()}] [PING_WITH_PRIORITY] Incorrect priority'
                   f'given. Priority = {priority}')
             return None
-
-        to_ping_str = self.support_wks.supporting_today()
-        print(f'[{utils.get_time()}]\t[PINGING] {to_ping_str} has been pinged ⚠️')
-        if to_ping_str == 'Egor':
-            if os.getenv("EGOR_SECOND_TELEGRAM_USERNAME") != '':
-                self.send_message(
-                    f"@{os.getenv('EGOR_TELEGRAM_USERNAME')} @{os.getenv('EGOR_SECOND_TELEGRAM_USERNAME')}")
-            else:
-                self.send_message(f"@{os.getenv('EGOR_TELEGRAM_USERNAME')}")
-        elif to_ping_str == 'Vova':
-            if os.getenv("VOVA_SECOND_TELEGRAM_USERNAME") != '':
-                self.send_message(
-                    f"@{os.getenv('VOVA_TELEGRAM_USERNAME')} @{os.getenv('VOVA_SECOND_TELEGRAM_USERNAME')}")
-            else:
-                self.send_message(f"@{os.getenv('VOVA_TELEGRAM_USERNAME')}")
-        elif to_ping_str == 'Ivan':
-            if os.getenv("IVAN_SECOND_TELEGRAM_USERNAME") != '':
-                self.send_message(
-                    f"@{os.getenv('IVAN_TELEGRAM_USERNAME')} @{os.getenv('IVAN_SECOND_TELEGRAM_USERNAME')}")
-            else:
-                self.send_message(f"@{os.getenv('IVAN_TELEGRAM_USERNAME')}")
 
     def start_monitoring(self):
         print(f'[{utils.get_time()}] [{self.str_name} TELEGRAM CHANEL] Started incoming messages monitoring ✅')
@@ -390,8 +386,7 @@ class TelegramChanel:
                     f'been pinged')
                 self.stop_event = threading.Event()
                 print(f'[{utils.get_time()}] [{self.str_name} TELEGRAM CHANEL] Starting issue thread...')
-                self.warning_thread = threading.Thread(target=self.warning_thread, args=(self.stop_event,))
-                self.warning_thread.start()
+                threading.Thread(target=self.warning_thread, args=(self.stop_event,)).start()
             # """-----------------------------------------------------------------------"""
 
             # """----------------Not an issue. Locking chanel for discussion------------------"""
@@ -487,7 +482,8 @@ class TelegramChanel:
                 message.text = ''
             monitor_incoming(message)
 
-        self.bot.polling(non_stop=True)
+
+        self.bot.infinity_polling(timeout=100, long_polling_timeout=50)
 
 
 def create_telegram_channel(dotenv_name,
@@ -554,27 +550,34 @@ def test_bots_starting(channels_to_init, channel_params):
 def start_bot_chanel_threads(main_chanel, channel_params,
                              employees, START_MUTED, ASK_RESOL_STAT, REQUEST_ERROR_RESOLUTION_CODE,
                              INIT_DELAY, PROD_TIMINGS, TEST_TIMINGS, TEST, support_wks, support_data_wks):
+    bot_threads = []
     for channel_name in return_channels_to_init(channel_params, TEST):
         bot = TelegramBot(dotenv_tokenname=channel_params[channel_name][1]).start_bot()
         print('- ' * 40)
         print(f'[{utils.get_time()}] [THREAD {channel_name.upper()}] Starting thread 🔁')
-        threading.Thread(target=create_telegram_channel, args=
-        (
-            channel_params[channel_name][0],
-            bot,
-            channel_params[channel_name][2],
-            main_chanel,
-            employees,
-            START_MUTED,
-            ASK_RESOL_STAT,
-            REQUEST_ERROR_RESOLUTION_CODE,
-            TEST,
-            INIT_DELAY,
-            PROD_TIMINGS,
-            TEST_TIMINGS,
-            support_wks,
-            support_data_wks
-        )).start()
+
+        bot_threads.append(
+            threading.Thread(target=create_telegram_channel, args=
+                (
+                    channel_params[channel_name][0],
+                    bot,
+                    channel_params[channel_name][2],
+                    main_chanel,
+                    employees,
+                    START_MUTED,
+                    ASK_RESOL_STAT,
+                    REQUEST_ERROR_RESOLUTION_CODE,
+                    TEST,
+                    INIT_DELAY,
+                    PROD_TIMINGS,
+                    TEST_TIMINGS,
+                    support_wks,
+                    support_data_wks
+                )
+            )
+        )
+    for bot_thread in bot_threads:
+        bot_thread.start()
         print(f'\n[{utils.get_time()}]\t[THREAD {channel_name.upper()}] Started ✅✅✅')
         time.sleep(1)
     print('=' * 80)

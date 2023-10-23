@@ -16,7 +16,7 @@ def call_employee_with_priority(employees, priority, chanel_name=None):
     # Open call_request.txt and create a request for server to send call
     if priority==0:
         employee = employees[0]
-    elif priority <= (len(employees)-1):
+    elif priority <= (len(employees)-1) and priority!=0:
         employee = employees[priority]
     else:
         print(f'[{utils.get_date_and_time()}] [CALL_EMPLOYEE_WITH_PRIORITY] [{chanel_name.upper()}] '
@@ -27,7 +27,7 @@ def call_employee_with_priority(employees, priority, chanel_name=None):
 
     with open('call_request.txt', 'w') as call_request:
         print(f'{employee.upper()}_{cellphone.upper()}CELLPHONE_NUMBER')
-        number = str(os.getenv(f'{employee.upper()}_{cellphone.upper()}CELLPHONE_NUMBER'))
+        number = os.getenv(f'{employee.upper()}_{cellphone.upper()}CELLPHONE_NUMBER')
         print(f'[{utils.get_date_and_time()}] Sending request to call {number}')
         call_request.writelines(
             [number]
