@@ -34,18 +34,18 @@ def is_from_ucs(message, employees=None):
 
     if employees:
         tg_names = []
-        print(f'[IS_FROM_UCS] Checking whether message was sent from ucs')
+        # print(f'[IS_FROM_UCS] Checking whether message was sent from ucs')
         for employee in employees:
             if os.getenv(f'{employee.upper()}_SECOND_TELEGRAM_USERNAME')!='':
                 tg_names.append([os.getenv(f"{employee.upper()}_TELEGRAM_USERNAME"),
                                  os.getenv(f"{employee.upper()}_SECOND_TELEGRAM_USERNAME")])
             else:
                 tg_names.append([os.getenv(f"{employee.upper()}_TELEGRAM_USERNAME")])
-        print(f'\t[TG USERNAMES FETCHED] From is_from_ucs i got this tg usernames {tg_names}')
+        # print(f'\t[TG USERNAMES FETCHED] From is_from_ucs i got this tg usernames {tg_names}')
         for emp_id, tg_username in enumerate(tg_names):
             for id, sub_array in enumerate(tg_username):
                 if message.from_user.username == sub_array:
-                    print(f'\t\t[IS_FROM_UCS] Found employee {employees[emp_id]}')
+                    # print(f'\t\t[IS_FROM_UCS] Found employee {employees[emp_id]}')
                     return employees[emp_id]
         return False
     else:
@@ -452,8 +452,21 @@ class TelegramChanel:
                         elapsed = "{} seconds".format(int(seconds))
                     resolved_by = is_from_ucs(message, self.employees)
                     rp_time = self.response_time - self.start_time
+                    rp_time = round(rp_time)
+
+                    # Calculate hours, minutes, and seconds
+                    rp_hours = rp_time // 3600
+                    remaining_seconds = rp_time % 3600
+                    rp_minutes = remaining_seconds // 60
+                    rp_seconds = remaining_seconds % 60
+                    if rp_hours>0:
+                        rp_elapsed = f'{rp_hours} hours {rp_minutes} minutes {rp_seconds} seconds'
+                    elif rp_minutes>0:
+                        rp_elapsed = f'{rp_minutes} minutes {rp_seconds} seconds'
+                    else:
+                        rp_elapsed = f'{rp_seconds} seconds'
                     self.main_chanel.send_message(f'{self.str_name}\nIssue resolved by {is_from_ucs(message, self.employees)} in'
-                                                  f'{elapsed}.\nResponse time: {rp_time}')
+                                                  f'{elapsed}.\nResponse time: {rp_elapsed}')
                     print(f"[{utils.get_time()}] [{self.str_name.upper()} TG CHANEL] {is_from_ucs(message, self.employees)} resolved"
                           f"issue in {elapsed}")
                     row = self.support_data_wks.upload_issue_data(
