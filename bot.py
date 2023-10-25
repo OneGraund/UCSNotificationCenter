@@ -34,16 +34,19 @@ def is_from_ucs(message, employees=None):
 
     if employees:
         tg_names = []
+        print(f'[IS_FROM_UCS] Checking whether message was sent from ucs')
         for employee in employees:
             if os.getenv(f'{employee.upper()}_SECOND_TELEGRAM_USERNAME')!='':
                 tg_names.append([os.getenv(f"{employee.upper()}_TELEGRAM_USERNAME"),
                                  os.getenv(f"{employee.upper()}_SECOND_TELEGRAM_USERNAME")])
             else:
                 tg_names.append([os.getenv(f"{employee.upper()}_TELEGRAM_USERNAME")])
-        for tg_username in tg_names:
+        print(f'\t[TG USERNAMES FETCHED] From is_from_ucs i got this tg usernames {tg_names}')
+        for emp_id, tg_username in enumerate(tg_names):
             for id, sub_array in enumerate(tg_username):
                 if message.from_user.username == sub_array:
-                    return employees[id]
+                    print(f'\t\t[IS_FROM_UCS] Found employee {employees[emp_id]}')
+                    return employees[emp_id]
         return False
     else:
         if message.from_user.username == os.getenv('ALEX_TELEGRAM_USERNAME'):

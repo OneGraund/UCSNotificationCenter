@@ -58,14 +58,18 @@ channel_params = {
     'TestChanel': ('TEST_CHAT_ID', 'UCS_Support_Bot_TELEGRAM_API_TOKEN', 'de')
 }
 
-employees = []
-for i in range(1, 20):
-    val = os.getenv(f'EMPLOYEE{i}_NAME')
-    if val!='':
-        employees.append(val)
-    else:
-        break
 
+def fetch_employees_from_env():
+    employees = []
+    for i in range(1, 20):
+        val = os.getenv(f'EMPLOYEE{i}_NAME')
+        if val!='':
+            employees.append(val)
+        else:
+            break
+    return employees
+
+employees = fetch_employees_from_env()
 
 
 if __name__ == '__main__':
@@ -108,6 +112,7 @@ if __name__ == '__main__':
 
     # Parse the command-line arguments
     args = parser.parse_args()
+
 
     # Update variables based on command-line arguments
     new_HOST = [None, None]
