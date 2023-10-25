@@ -352,7 +352,8 @@ class TelegramChanel:
                 else:
                     lowered_message = ''
             print(f'[{utils.get_time()}] [{self.str_name} TELEGRAM CHANEL] Received new message, message text: '
-                  f'{message.text}, from {message.from_user.username}')
+                  f'{message.text}, from {message.from_user.username}. Is_from_UCS -- '
+                  f'{is_from_ucs(message, self.employees)}')
 
             # Check whether the actuation time has been elapsed to fight with issue #2
             if (time.time() - self.launch_time) <= self.INIT_DELAY != 0:
