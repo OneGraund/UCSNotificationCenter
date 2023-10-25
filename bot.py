@@ -466,7 +466,7 @@ class TelegramChanel:
                     else:
                         rp_elapsed = f'{rp_seconds} seconds'
                     self.main_chanel.send_message(f'{self.str_name}\nIssue resolved by {is_from_ucs(message, self.employees)} in'
-                                                  f'{elapsed}.\nResponse time: {rp_elapsed}')
+                                                  f' {elapsed}.\nResponse time: {rp_elapsed}')
                     print(f"[{utils.get_time()}] [{self.str_name.upper()} TG CHANEL] {is_from_ucs(message, self.employees)} resolved"
                           f"issue in {elapsed}")
                     row = self.support_data_wks.upload_issue_data(
