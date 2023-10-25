@@ -10,6 +10,7 @@ from sip_call import call_employee_with_priority
 
 dotenv.load_dotenv()
 
+# sup
 
 class TelegramBot:
     def __init__(self, dotenv_tokenname):

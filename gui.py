@@ -7,6 +7,7 @@ import utils
 from tkinter import font
 
 dotenv.load_dotenv()
+# sup
 
 def input_thread():
     def on_kill():

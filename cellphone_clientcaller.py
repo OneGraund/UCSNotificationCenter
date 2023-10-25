@@ -7,6 +7,7 @@ import subprocess
 import time
 
 # usage: ./client.py [PORT] [HOST]
+# sup
 
 while True:  # Infinite loop to attempt reconnection
     if len(sys.argv) == 1:
