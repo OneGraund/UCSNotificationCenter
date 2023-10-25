@@ -59,7 +59,7 @@ channel_params = {
 }
 
 employees = []
-for i in range(20):
+for i in range(1, 20):
     val = os.getenv(f'EMPLOYEE{i}_NAME')
     if val!='':
         employees.append(val)
@@ -158,7 +158,7 @@ if __name__ == '__main__':
     else:
         time.sleep(15)
 
-    from bot import return_channels_to_init, UCSAustriaChanel, start_bot_chanel_threads, restart_monitor
+    from bot import return_channels_to_init, UCSAustriaChanel, start_bot_chanel_threads
 
     support_wks = SupportWKS(UPD_INTERVAL=WORKSHEETS_UPD_INTERVALS,OUTPUT_UPDATES=WORKSHEETS_OUTPUT_UPDATES)
     support_data_wks = SupportDataWKS(UPD_INTERVAL=WORKSHEETS_UPD_INTERVALS,OUTPUT_UPDATES=WORKSHEETS_OUTPUT_UPDATES)
