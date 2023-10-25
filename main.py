@@ -217,4 +217,3 @@ if __name__ == '__main__':
                              )
 
     print(f'[{utils.get_date_and_time()}] [MAIN] Starting issue handling thread...')
-    restart_monitor()
