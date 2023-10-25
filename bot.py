@@ -502,7 +502,7 @@ class TelegramChanel:
             monitor_incoming(message)
 
         try:
-            self.bot.polling()
+            self.bot.polling(none_stop=True)
         except:
             print(f'[{utils.get_date_and_time()}] [{self.str_name}] Polling failed, restarting monitoring ‼️')
             self.restart_monitoring()
