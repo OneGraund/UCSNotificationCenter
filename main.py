@@ -19,6 +19,7 @@ NOTIFY_UCS_ON_START = False
 REQUEST_ERROR_RESOLUTION_CODE = False
 WORKSHEETS_UPD_INTERVALS = 5
 WORKSHEETS_OUTPUT_UPDATES = True
+FAST_START = False
 PROD_TIMINGS = [3, 5, 7, 8, 10]
 TEST_TIMINGS = [0.5, 1, 1.25, 1.50, 1.75]
 HOST = (socket.gethostbyname(socket.gethostname()), 10000)
@@ -92,6 +93,8 @@ if __name__ == '__main__':
                         help="Specify time interval between each worksheet buffer update. Default = 5")
     parser.add_argument("--wks_output_upd", action="store_true",
                         help="If specified, than outputs in terminal that buffer of wks was updated")
+    parser.add_argument("--fast_start", action="store_true",
+                        help="Fast start without init delay or any in case")
 
     # Parse the command-line arguments
     args = parser.parse_args()
@@ -116,6 +119,8 @@ if __name__ == '__main__':
         WORKSHEETS_UPD_INTERVALS = args.wks_upd_interval
     if args.wks_output_upd:
         WORKSHEETS_OUTPUT_UPDATES = True
+    if args.fast_start:
+        FAST_START = True
 
 
     tmp_tuple_host = HOST
@@ -142,7 +147,7 @@ if __name__ == '__main__':
     else:
         time.sleep(15)
 
-    from bot import return_channels_to_init, UCSAustriaChanel, start_bot_chanel_threads
+    from bot import return_channels_to_init, UCSAustriaChanel, start_bot_chanel_threads, restart_monitor
 
     support_wks = SupportWKS(UPD_INTERVAL=WORKSHEETS_UPD_INTERVALS,OUTPUT_UPDATES=WORKSHEETS_OUTPUT_UPDATES)
     support_data_wks = SupportDataWKS(UPD_INTERVAL=WORKSHEETS_UPD_INTERVALS,OUTPUT_UPDATES=WORKSHEETS_OUTPUT_UPDATES)
@@ -196,5 +201,9 @@ if __name__ == '__main__':
                              TEST_TIMINGS=TEST_TIMINGS,
                              TEST=TEST,
                              support_wks=support_wks,
-                             support_data_wks=support_data_wks
+                             support_data_wks=support_data_wks,
+                             fast_start=FAST_START
                              )
+
+    print(f'[{utils.get_date_and_time()}] [MAIN] Starting issue handling thread...')
+    restart_monitor()

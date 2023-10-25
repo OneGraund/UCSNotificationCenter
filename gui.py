@@ -17,7 +17,7 @@ def input_thread():
     def on_update():
         print(f"[{utils.get_time()}] Running update.bat...")
         # Run the update.bat file
-        os.system("update.bat")
+        os.system("windows_console_managment/update.bat")
 
     # Create the tkinter window
     window = tk.Tk()

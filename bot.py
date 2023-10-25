@@ -31,31 +31,34 @@ def is_from_ucs(message, employees=None):
     # subarrays even if employe has only one telegram username
     # employes: [Vova, Egor, Yaro, Ivan, Igor, Alex] -> tg_usernames: [[vova_ucs, onegraund], [noname, egor_ucs], …]
 
-    """if employees:
+    if employees:
         tg_names = []
         for employee in employees:
             if os.getenv(f'{employee.upper()}_SECOND_TELEGRAM_USERNAME')!='':
                 tg_names.append([os.getenv(f"{employee.upper()}_TELEGRAM_USERNAME"),
                                  os.getenv(f"{employee.upper()}_SECOND_TELEGRAM_USERNAME")])
             else:
-                tg_names.append([os.getenv(f"{employee.uppe()}_TELEGRAM_USERNAME")])
+                tg_names.append([os.getenv(f"{employee.upper()}_TELEGRAM_USERNAME")])
         for tg_username in tg_names:
-            for sub_array in tg_username:
+            for id, sub_array in enumerate(tg_username):
                 if message.from_user.username == sub_array:
-                    return """
-
-    if message.from_user.username == os.getenv('ALEX_TELEGRAM_USERNAME'):
-        return 'Alex'
-    elif message.from_user.username == os.getenv('EGOR_TELEGRAM_USERNAME') or \
-            message.from_user.username == os.getenv('EGOR_SECOND_TELEGRAM_USERNAME'):
-        return 'Egor'
-    elif message.from_user.username == os.getenv('VOVA_TELEGRAM_USERNAME') or \
-            message.from_user.username == os.getenv('VOVA_SECOND_TELEGRAM_USERNAME'):
-        return 'Vova'
-    elif message.from_user.username == os.getenv('Ivan_TELEGRAM_USERNAME'):
-        return 'Ivan'
-    else:
+                    return employees[id]
         return False
+    else:
+        if message.from_user.username == os.getenv('ALEX_TELEGRAM_USERNAME'):
+            return 'Alex'
+        elif message.from_user.username == os.getenv('EGOR_TELEGRAM_USERNAME') or \
+                message.from_user.username == os.getenv('EGOR_SECOND_TELEGRAM_USERNAME'):
+            return 'Egor'
+        elif message.from_user.username == os.getenv('VOVA_TELEGRAM_USERNAME') or \
+                message.from_user.username == os.getenv('VOVA_SECOND_TELEGRAM_USERNAME'):
+            return 'Vova'
+        elif message.from_user.username == os.getenv('IVAN_TELEGRAM_USERNAME'):
+            return 'Ivan'
+        elif message.from_user.username == os.getenv('IGOR_TELEGRAM_USERNAME'):
+            return 'Igor'
+        else:
+            return False
 
 
 def is_thank_you(message):
@@ -177,7 +180,8 @@ class TelegramChanel:
                  PROD_TIMINGS=[3, 5, 7, 8, 10],
                  TEST_TIMINGS=[0.1, 0.2, 0.3, 0.4, 0.5],
                  support_wks=None,
-                 support_data_wks=None
+                 support_data_wks=None,
+                 thread_data = None
                  ):
         self.START_MUTED = START_MUTED
         self.TEST = TEST
@@ -197,10 +201,13 @@ class TelegramChanel:
         self.chat_id = os.getenv(dotenv_name)
         self.bot = bot
         self.language = language
+        self.thread_data = thread_data
         self.main_chanel = main_chanel
 
         if not ASK_RESOL_STAT:
             self.status = 'resolved'
+            with open('restart_permission.txt', 'w') as file:
+                file.writelines(['Permited'])
         else:
             self.status = 'unknown'
             self.send_message(f'Resolution status unknow. Please specify current chanel status')
@@ -328,6 +335,9 @@ class TelegramChanel:
                   f'given. Priority = {priority}')
             return None
 
+    def restart_monitoring(self):
+        self.start_monitoring()
+
     def start_monitoring(self):
         print(f'[{utils.get_time()}] [{self.str_name} TELEGRAM CHANEL] Started incoming messages monitoring ✅')
         self.start_time = None
@@ -346,7 +356,7 @@ class TelegramChanel:
                   f'{message.text}, from {message.from_user.username}')
 
             # Check whether the actuation time has been elapsed to fight with issue #2
-            if (time.time() - self.launch_time) <= self.INIT_DELAY:
+            if (time.time() - self.launch_time) <= self.INIT_DELAY != 0:
                 print(f'[{utils.get_time()}] [{self.str_name} CHANEL] Initialisation not yet complete. ⏰'
                       f'\n\t[REMAINING FOR INIT] {self.INIT_DELAY - (time.time() - self.launch_time)}')
                 return  # If bot was started less than a minute ago
@@ -379,6 +389,8 @@ class TelegramChanel:
                 print(f'[{utils.get_time()}] [{self.str_name} TELEGRAM CHANEL] New issue report ⚠! Warning level 0')
                 self.status = 'unresolved'
                 self.warning = 'warning0'
+                with open('restart_permission.txt', 'w') as file:
+                    file.writelines(['Denied'])
                 self.start_time = time.time()
                 self.ping_with_priority(priority=0)
                 print(
@@ -402,6 +414,8 @@ class TelegramChanel:
             # """-----------------Unlocking chanel--------------------------------------"""
             elif is_from_ucs(message) and lowered_message == 'unlock' and self.status == 'locked':
                 self.status = 'resolved'
+                with open('restart_permission.txt', 'w') as file:
+                    file.writelines(['Permited'])
                 print(f'[{utils.get_time()} [{self.str_name.upper()} TG CHANEL] unlocking chanel for further monitor')
                 self.send_message('Chanel unlocked, continuing monitoring')
             # """-----------------------------------------------------------------------"""
@@ -424,6 +438,8 @@ class TelegramChanel:
             elif self.status == 'unresolved' and self.warning == 'no warning' and is_resolution_message(message) \
                     and is_from_ucs(message):
                 self.status = 'resolved'
+                with open ('restart_permission.txt', 'w') as file:
+                    file.writelines(['Permited'])
                 if self.start_time is not None:
                     end_time = time.time()
                     elapsed_time = end_time - self.start_time
@@ -435,12 +451,10 @@ class TelegramChanel:
                         elapsed = "{} minutes {} seconds".format(int(minutes), int(seconds))
                     else:
                         elapsed = "{} seconds".format(int(seconds))
-                    if is_from_ucs(message).lower() == 'Ivan':
-                        resolved_by = 'Ivan'
-                    else:
-                        resolved_by = is_from_ucs(message)
-                    self.send_message(f'Issue resolved by {is_from_ucs(message)} in {elapsed}')
+                    resolved_by = is_from_ucs(message, self.employees)
                     rp_time = self.response_time - self.start_time
+                    self.main_chanel.send_message(f'{self.str_name}\nIssue resolved by {is_from_ucs(message)} in '
+                                                  f'{elapsed}.\nResponse time: {rp_time}')
                     print(f"[{utils.get_time()}] [{self.str_name.upper()} TG CHANEL] {is_from_ucs(message)} resolved "
                           f"issue in {elapsed}")
                     row = self.support_data_wks.upload_issue_data(
@@ -453,15 +467,8 @@ class TelegramChanel:
                     to_append = f'{datetime.datetime.now().strftime("%A, %dth %B, %H:%M:%S")} issue resolved by ' \
                                 f' {is_from_ucs(message)} in ' \
                                 f'{elapsed_time} seconds. Response time: {end_time - self.response_time}\n'
-                    if is_from_ucs(message).lower() == 'vova':
-                        with open('statistics/vova.txt', 'a') as f:
-                            f.write(to_append)
-                    elif is_from_ucs(message).lower() == 'egor':
-                        with open('statistics/egor.txt', 'a') as f:
-                            f.write(to_append)
-                    elif is_from_ucs(message).lower() == 'Ivan':
-                        with open('statistics/Ivan.txt') as f:
-                            f.write(to_append)
+                    with open(f'statistics/{is_from_ucs(message).lower()}.txt', 'a') as f:
+                        f.write(to_append)
                 else:
                     print(f"[{utils.get_time()}] [{self.str_name.upper()} TG CHANEL] {is_from_ucs(message)} "
                           f"resolved issue")
@@ -482,8 +489,13 @@ class TelegramChanel:
                 message.text = ''
             monitor_incoming(message)
 
+        try:
+            self.bot.polling()
+        except:
+            print(f'[{utils.get_date_and_time()}] [{self.str_name}] Polling failed, restarting monitoring ‼️')
+            self.restart_monitoring()
 
-        self.bot.infinity_polling(timeout=100, long_polling_timeout=50)
+
 
 
 def create_telegram_channel(dotenv_name,
@@ -548,13 +560,16 @@ def test_bots_starting(channels_to_init, channel_params):
 
 
 def start_bot_chanel_threads(main_chanel, channel_params,
-                             employees, START_MUTED, ASK_RESOL_STAT, REQUEST_ERROR_RESOLUTION_CODE,
-                             INIT_DELAY, PROD_TIMINGS, TEST_TIMINGS, TEST, support_wks, support_data_wks):
+                             employees, START_MUTED, ASK_RESOL_STAT, REQUEST_ERROR_RESOLUTION_CODE, INIT_DELAY,
+                             PROD_TIMINGS, TEST_TIMINGS, TEST, support_wks, support_data_wks, fast_start):
     bot_threads = []
     for channel_name in return_channels_to_init(channel_params, TEST):
         bot = TelegramBot(dotenv_tokenname=channel_params[channel_name][1]).start_bot()
         print('- ' * 40)
         print(f'[{utils.get_time()}] [THREAD {channel_name.upper()}] Starting thread 🔁')
+
+        if fast_start:
+            INIT_DELAY = 0
 
         bot_threads.append(
             threading.Thread(target=create_telegram_channel, args=
@@ -576,6 +591,7 @@ def start_bot_chanel_threads(main_chanel, channel_params,
                 )
             )
         )
+        bot_threads[len(bot_threads)-1].setName(f'THREAD_{channel_name.upper()}')
     for bot_thread in bot_threads:
         bot_thread.start()
         print(f'\n[{utils.get_time()}]\t[THREAD {channel_name.upper()}] Started ✅✅✅')
