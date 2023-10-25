@@ -207,8 +207,6 @@ class TelegramChanel:
 
         if not ASK_RESOL_STAT:
             self.status = 'resolved'
-            with open('restart_permission.txt', 'w') as file:
-                file.writelines(['Permited'])
         else:
             self.status = 'unknown'
             self.send_message(f'Resolution status unknow. Please specify current chanel status')
@@ -369,7 +367,7 @@ class TelegramChanel:
                 self.chat_id = message.chat.id
 
             # """-------------Change status of telegram chanel from unknown-------------"""
-            if is_from_ucs(message) and self.status == 'unknown':
+            if is_from_ucs(message, self.employees) and self.status == 'unknown':
                 for status in TelegramChanel.statuses:
                     if status == lowered_message:
                         stat_loc = lowered_message.find(status)
@@ -386,12 +384,10 @@ class TelegramChanel:
             # """-----------------------------------------------------------------------"""
 
             # """------------Create new issue tech report---Start warning thread--------"""
-            elif self.status == 'resolved' and not is_from_ucs(message) and not is_thank_you(message):
+            elif self.status == 'resolved' and not is_from_ucs(message, self.employees) and not is_thank_you(message):
                 print(f'[{utils.get_time()}] [{self.str_name} TELEGRAM CHANEL] New issue report ⚠! Warning level 0')
                 self.status = 'unresolved'
                 self.warning = 'warning0'
-                with open('restart_permission.txt', 'w') as file:
-                    file.writelines(['Denied'])
                 self.start_time = time.time()
                 self.ping_with_priority(priority=0)
                 print(
@@ -403,7 +399,7 @@ class TelegramChanel:
             # """-----------------------------------------------------------------------"""
 
             # """----------------Not an issue. Locking chanel for discussion------------------"""
-            elif is_from_ucs(message) and (lowered_message == 'not an issue' or lowered_message == 'lock'):
+            elif is_from_ucs(message, self.employees) and (lowered_message == 'not an issue' or lowered_message == 'lock'):
                 # or 'kein problem' in lowered_message:
                 self.status = 'locked'
                 self.stop_event.set()
@@ -413,17 +409,15 @@ class TelegramChanel:
             # """-----------------------------------------------------------------------"""
 
             # """-----------------Unlocking chanel--------------------------------------"""
-            elif is_from_ucs(message) and lowered_message == 'unlock' and self.status == 'locked':
+            elif is_from_ucs(message, self.employees) and lowered_message == 'unlock' and self.status == 'locked':
                 self.status = 'resolved'
-                with open('restart_permission.txt', 'w') as file:
-                    file.writelines(['Permited'])
                 print(f'[{utils.get_time()} [{self.str_name.upper()} TG CHANEL] unlocking chanel for further monitor')
                 self.send_message('Chanel unlocked, continuing monitoring')
             # """-----------------------------------------------------------------------"""
 
             # """-------------Remove warning, but leave unresolved status---------------"""
-            elif is_from_ucs(message) and self.status == 'unresolved' and self.warning != 'no warning':
-                who_answered_to_report = is_from_ucs(message)
+            elif is_from_ucs(message, self.employees) and self.status == 'unresolved' and self.warning != 'no warning':
+                who_answered_to_report = is_from_ucs(message, self.employees)
                 self.send_message(f'{who_answered_to_report} is now resolving the issue in {self.str_name} after '
                                   f'{self.warning}')
                 self.responsed_at_warning_level = self.warning
@@ -437,7 +431,7 @@ class TelegramChanel:
 
             # """-----------------------Set status to resolved--------------------------"""
             elif self.status == 'unresolved' and self.warning == 'no warning' and is_resolution_message(message) \
-                    and is_from_ucs(message):
+                    and is_from_ucs(message, self.employees):
                 self.status = 'resolved'
                 with open ('restart_permission.txt', 'w') as file:
                     file.writelines(['Permited'])
@@ -454,26 +448,26 @@ class TelegramChanel:
                         elapsed = "{} seconds".format(int(seconds))
                     resolved_by = is_from_ucs(message, self.employees)
                     rp_time = self.response_time - self.start_time
-                    self.main_chanel.send_message(f'{self.str_name}\nIssue resolved by {is_from_ucs(message)} in '
+                    self.main_chanel.send_message(f'{self.str_name}\nIssue resolved by {is_from_ucs(message, self.employees)} in'
                                                   f'{elapsed}.\nResponse time: {rp_time}')
-                    print(f"[{utils.get_time()}] [{self.str_name.upper()} TG CHANEL] {is_from_ucs(message)} resolved "
+                    print(f"[{utils.get_time()}] [{self.str_name.upper()} TG CHANEL] {is_from_ucs(message, self.employees)} resolved"
                           f"issue in {elapsed}")
                     row = self.support_data_wks.upload_issue_data(
                         response_time=rp_time, resolution_time=elapsed_time,
-                        person_name=is_from_ucs(message), restaurant_name=self.str_name,
+                        person_name=is_from_ucs(message, self.employees), restaurant_name=self.str_name,
                         warning_status=self.responsed_at_warning_level
                     )
                     if self.REQUEST_ERROR_RESOLUTION_CODE:
-                        self.main_chanel.request_problem_resoluion_codes(row, is_from_ucs(message), self.str_name)
+                        self.main_chanel.request_problem_resoluion_codes(row, is_from_ucs(message, self.employees), self.str_name)
                     to_append = f'{datetime.datetime.now().strftime("%A, %dth %B, %H:%M:%S")} issue resolved by ' \
-                                f' {is_from_ucs(message)} in ' \
+                                f' {is_from_ucs(message, self.employees)} in ' \
                                 f'{elapsed_time} seconds. Response time: {end_time - self.response_time}\n'
-                    with open(f'statistics/{is_from_ucs(message).lower()}.txt', 'a') as f:
+                    with open(f'statistics/{is_from_ucs(message, self.employees).lower()}.txt', 'a') as f:
                         f.write(to_append)
                 else:
-                    print(f"[{utils.get_time()}] [{self.str_name.upper()} TG CHANEL] {is_from_ucs(message)} "
+                    print(f"[{utils.get_time()}] [{self.str_name.upper()} TG CHANEL] {is_from_ucs(message, self.employees)} "
                           f"resolved issue")
-                    self.send_message(f'Issue resolved by {is_from_ucs(message)}')
+                    self.send_message(f'Issue resolved by {is_from_ucs(message, self.employees)}')
             # """-----------------------------------------------------------------------"""
 
             # """----------------------Nothing happened---------------------------------"""

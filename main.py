@@ -58,7 +58,15 @@ channel_params = {
     'TestChanel': ('TEST_CHAT_ID', 'UCS_Support_Bot_TELEGRAM_API_TOKEN', 'de')
 }
 
-employees = ['Egor', 'Ivan', 'Vova', 'Alex']
+employees = []
+for i in range(20):
+    val = os.getenv(f'EMPLOYEE{i}_NAME')
+    if val!='':
+        employees.append(val)
+    else:
+        break
+
+
 
 if __name__ == '__main__':
     # Reconfigure employees array, to put on the highest priority the person that is supporting today
@@ -144,6 +152,7 @@ if __name__ == '__main__':
           f'\t\tNOTIFY_ON_START={NOTIFY_UCS_ON_START}, REQUEST_ERROR_RESOLUTION_CODE={REQUEST_ERROR_RESOLUTION_CODE}\n'
           f'\t\tTELEPHONY_HOST={HOST}, WORKSHEETS_UPD_INTERVALS={WORKSHEETS_UPD_INTERVALS}\n'
           f'\t\tWORKSHEETS_OUTPUT_UPDATES={WORKSHEETS_OUTPUT_UPDATES}')
+    print(f'[{utils.get_date_and_time()}] [MAIN SCRIPT] [EMPLOYEES] Employees that are in db: {employees}')
     if TEST:
         time.sleep(5)
     else:
