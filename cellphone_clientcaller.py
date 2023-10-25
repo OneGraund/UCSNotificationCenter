@@ -9,11 +9,18 @@ import time
 # usage: ./client.py [PORT] [HOST]
 # sup
 
+
+
 while True:  # Infinite loop to attempt reconnection
+    # Set default values for HOST and PORT
+    DEFAULT_HOST = "192.168.192.114"
+    DEFAULT_PORT = 10000
+
+    # Check if the user provides HOST and PORT, otherwise use default
     if len(sys.argv) == 1:
-        HOST = ("localhost", 10000)
+        HOST = (DEFAULT_HOST, DEFAULT_PORT)
     elif len(sys.argv) == 2:
-        HOST = ("localhost", int(sys.argv[1]))
+        HOST = (DEFAULT_HOST, int(sys.argv[1]))
     else:
         HOST = (sys.argv[2], int(sys.argv[1]))
 
