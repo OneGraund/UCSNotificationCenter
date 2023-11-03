@@ -84,7 +84,7 @@ def start_telephony_server(HOST=('192.168.192.114', 10000)):
         try:
             with open('call_request.txt', 'r') as file:
                 lines = file.readlines()
-            print(lines)          # DEBUG
+            #print(lines)          # DEBUG
             if lines[0].find('+')!=-1:
                 print(f'[{utils.get_date_and_time()}] [TELEPHONY SERVER] Sending a request '
                       f'to a client_android_phone to call {lines[0]}')
