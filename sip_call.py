@@ -81,21 +81,21 @@ def start_telephony_server(HOST=('192.168.192.114', 10000)):
 
     print(f'[{utils.get_date_and_time()}] [CALLING SERVER] Server started, now in infinity loop')
     while 1:
-    #try:
-        with open('call_request.txt', 'r') as file:
-            lines = file.readlines()
-        # print(lines)          # DEBUG
-        if lines[0].find('+')!=-1:
-            print(f'[{utils.get_date_and_time()}] [TELEPHONY SERVER] Sending a request '
-                  f'to a client_android_phone to call {lines[0]}')
-            for client in CLIENTS:
-                client.sendall(f'{lines[0]}\n'.encode())
-                lines[0]='None'
-            with open('call_request.txt', 'w') as file:
-                file.writelines('None')
-    #except Exception as e:
-        #print(f'[{utils.get_date_and_time()}] [CALLING SERVER] An error occured when running server.'
-             # f'Details:\n{e}')
+        try:
+            with open('call_request.txt', 'r') as file:
+                lines = file.readlines()
+            print(lines)          # DEBUG
+            if lines[0].find('+')!=-1:
+                print(f'[{utils.get_date_and_time()}] [TELEPHONY SERVER] Sending a request '
+                      f'to a client_android_phone to call {lines[0]}')
+                for client in CLIENTS:
+                    client.sendall(f'{lines[0]}\n'.encode())
+                    lines[0]='None'
+                with open('call_request.txt', 'w') as file:
+                    file.writelines('None')
+        except Exception as e:
+            print(f'[{utils.get_date_and_time()}] [CALLING SERVER] An error occured when running server.'
+                  f'Details:\n{e}')
 
         time.sleep(SERVER_TIMEOUT)
 
