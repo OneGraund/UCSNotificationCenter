@@ -106,5 +106,6 @@ def start_telephony_server(HOST=('192.168.192.114', 10000)):
 
 
 if __name__ == '__main__':
+    print('[CALL SRV] Starting server from file itself...')
     start_telephony_server()
 # supfff

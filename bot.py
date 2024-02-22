@@ -6,11 +6,160 @@ import threading
 import time
 import utils
 import telebot
+from telebot import types
+from telebot.types import ReplyKeyboardRemove
 from sip_call import call_employee_with_priority
 
 dotenv.load_dotenv()
 
-# sup
+issues_dict = {
+    'Kiosk': {
+        'Software': {
+            'Kiosk soft issue 1': 'Error 101',
+            'Kiosk soft issue 2': 'Error 102',
+            'Kiosk soft issue 3': 'Error 103',
+            'Kiosk soft issue 4': 'Error 104',
+        },
+        'Hardware': {
+            'Kiosk hard issue 1': 'Error 201',
+            'Kiosk hard issue 2': 'Error 202',
+            'Kiosk hard issue 3': 'Error 203',
+            'Kiosk hard issue 4': 'Error 204',
+        },
+    },
+    'Kassa': {
+        'Software': {
+            'Kassa soft issue 1': 'Error 105',
+            'Kassa soft issue 2': 'Error 106',
+            'Kassa soft issue 3': 'Error 107',
+            'Kassa soft issue 4': 'Error 108',
+        },
+        'Hardware': {
+            'Kassa hard issue 1': 'Error 205',
+            'Kassa hard issue 2': 'Error 206',
+            'Kassa hard issue 3': 'Error 207',
+            'Kassa hard issue 4': 'Error 208',
+        },
+    },
+    'KDS': {
+        'Software': {
+            'KDS soft issue 1': 'Error 109',
+            'KDS soft issue 2': 'Error 110',
+            'KDS soft issue 3': 'Error 111',
+            'KDS soft issue 4': 'Error 112',
+        },
+        'Hardware': {
+            'KDS hard issue 1': 'Error 209',
+            'KDS hard issue 2': 'Error 210',
+            'KDS hard issue 3': 'Error 211',
+            'KDS hard issue 4': 'Error 212',
+        },
+    },
+    'QMS': {
+        'Software': {
+            'QMS soft issue 1': 'Error 113',
+            'QMS soft issue 2': 'Error 114',
+            'QMS soft issue 3': 'Error 115',
+            'QMS soft issue 4': 'Error 116',
+        },
+        'Hardware': {
+            'QMS hard issue 1': 'Error 213',
+            'QMS hard issue 2': 'Error 214',
+            'QMS hard issue 3': 'Error 215',
+            'QMS hard issue 4': 'Error 216',
+        },
+    },
+    'Server': {
+        'Software': {
+            'Server soft issue 1': 'Error 117',
+            'Server soft issue 2': 'Error 118',
+            'Server soft issue 3': 'Error 119',
+            'Server soft issue 4': 'Error 120',
+        },
+        'Hardware': {
+            'Server hard issue 1': 'Error 217',
+            'Server hard issue 2': 'Error 218',
+            'Server hard issue 3': 'Error 219',
+            'Server hard issue 4': 'Error 220',
+        },
+    },
+}
+
+resol_dict = {
+    'Kiosk': {
+        'Software': {
+            'Resolution method 1': 'Resol 101',
+            'Resolution method 2': 'Resol 102',
+            'Resolution method 3': 'Resol 103',
+            'Resolution method 4': 'Resol 104',
+        },
+        'Hardware': {
+            'Resolution method 1': 'Resol 201',
+            'Resolution method 2': 'Resol 202',
+            'Resolution method 3': 'Resol 203',
+            'Resolution method 4': 'Resol 204',
+        },
+    },
+    'Kassa': {
+        'Software': {
+            'Resolution method 1': 'Resol 105',
+            'Resolution method 2': 'Resol 106',
+            'Resolution method 3': 'Resol 107',
+            'Resolution method 4': 'Resol 108',
+        },
+        'Hardware': {
+            'Resolution method 1': 'Resol 205',
+            'Resolution method 2': 'Resol 206',
+            'Resolution method 3': 'Resol 207',
+            'Resolution method 4': 'Resol 208',
+        },
+    },
+    'KDS': {
+        'Software': {
+            'Resolution method 1': 'Resol 109',
+            'Resolution method 2': 'Resol 110',
+            'Resolution method 3': 'Resol 111',
+            'Resolution method 4': 'Resol 112',
+        },
+        'Hardware': {
+            'Resolution method 1': 'Resol 209',
+            'Resolution method 2': 'Resol 210',
+            'Resolution method 3': 'Resol 211',
+            'Resolution method 4': 'Resol 212',
+        },
+    },
+    'QMS': {
+        'Software': {
+            'Resolution method 1': 'Resol 113',
+            'Resolution method 2': 'Resol 114',
+            'Resolution method 3': 'Resol 115',
+            'Resolution method 4': 'Resol 116',
+        },
+        'Hardware': {
+            'Resolution method 1': 'Resol 213',
+            'Resolution method 2': 'Resol 214',
+            'Resolution method 3': 'Resol 215',
+            'Resolution method 4': 'Resol 216',
+        },
+    },
+    'Server': {
+        'Software': {
+            'Resolution method 1': 'Resol 117',
+            'Resolution method 2': 'Resol 118',
+            'Resolution method 3': 'Resol 119',
+            'Resolution method 4': 'Resol 120',
+        },
+        'Hardware': {
+            'Resolution method 1': 'Resol 217',
+            'Resolution method 2': 'Resol 218',
+            'Resolution method 3': 'Resol 219',
+            'Resolution method 4': 'Resol 220',
+        },
+    },
+}
+
+device_types = list(issues_dict.keys())
+
 
 class TelegramBot:
     def __init__(self, dotenv_tokenname):
@@ -21,7 +170,7 @@ class TelegramBot:
               f'in .env file...')
 
     def start_bot(self):
-        self.bot = telebot.TeleBot(self.API_KEY, threaded = True)
+        self.bot = telebot.TeleBot(self.API_KEY, threaded=True)
         # telebot.logger.setLevel(logging.DEBUG)
         print(f'[{utils.get_time()}] [TELEGRAM BOT {self.dotenv_tokenname}] Telegram bot started! ✔')
         return self.bot
@@ -36,7 +185,7 @@ def is_from_ucs(message, employees=None):
         tg_names = []
         # print(f'[IS_FROM_UCS] Checking whether message was sent from ucs')
         for employee in employees:
-            if os.getenv(f'{employee.upper()}_SECOND_TELEGRAM_USERNAME')!='':
+            if os.getenv(f'{employee.upper()}_SECOND_TELEGRAM_USERNAME') != '':
                 tg_names.append([os.getenv(f"{employee.upper()}_TELEGRAM_USERNAME"),
                                  os.getenv(f"{employee.upper()}_SECOND_TELEGRAM_USERNAME")])
             else:
@@ -87,6 +236,28 @@ def is_resolution_message(message):
         return True
 
 
+def generate_buttons(bts_names, markup):
+    for button in bts_names:
+        markup.add(types.KeyboardButton(button))
+    return markup
+
+
+def get_issues_and_codes(device, issue_type):
+    if device in issues_dict and issue_type in issues_dict[device]:
+        issues = issues_dict[device][issue_type]
+        return [[issue, code] for issue, code in issues.items()]
+    else:
+        return [["No data found for the given parameters."]]
+
+
+def get_resolutions_and_codes(device, issue_type):
+    if device in resol_dict and issue_type in resol_dict[device]:
+        resolutions = resol_dict[device][issue_type]
+        return [[issue, code] for issue, code in resolutions.items()]
+    else:
+        return [["No data found for the given parameters."]]
+
+
 class UCSAustriaChanel:
     def __init__(self, bot, inits, TEST=False, NOTIFY_UCS_ON_START=1, INIT_DELAY=75,
                  support_wks=None, support_data=None):
@@ -119,40 +290,188 @@ class UCSAustriaChanel:
     def send_message(self, message_text):
         self.bot.send_message(self.chat_id, message_text, disable_notification=1)
 
+    def clear_pending_updates(self):
+        print(f'[{utils.get_time()}] [MAIN BOT] [CLEARING PENDING UPDATES] Started clearing updates...')
+        updates = self.bot.get_updates()
+        if updates:
+            last_update_id = updates[-1].update_id
+            # Clear all pending updates
+            updates = self.bot.get_updates(offset=last_update_id + 1)
+            print("All pending updates have been cleared.")
+        else:
+            print("No updates to clear.")
+
     def request_problem_resoluion_codes(self, row, employee, restaurant_name):
-        def check_for_replies(id, stop_event):
+        personal_chat_id = str(os.getenv(f'{employee.upper()}_TELEGRAM_ID'))
+
+        def request_device_type():
+            markup = types.ReplyKeyboardMarkup(row_width=2)
+            with_else = device_types + ['Else']
+            markup = generate_buttons(with_else, markup)
+            self.bot.send_message(personal_chat_id,
+                                  f"Choose device type which you fixed in {restaurant_name}",
+                                  reply_markup=markup)
+
+            self.clear_pending_updates()
+            while True:
+                updates = self.bot.get_updates()
+                for update in updates:
+                    if update.message and str(update.message.chat.id) == personal_chat_id:
+                        if update.message.text in device_types:
+                            return update.message.text
+                        elif update.message.text == 'Else':
+                            print(f'[{utils.get_time()}] [REQ ERR SOL] User chose device type "Else"')
+                            return 'Else'
+                        else:
+                            print(f'[{utils.get_time()}] [REQ ERR SOL] Specified device type by user is not in list'
+                                  f'. Message text: {update.message.text}')
+                            self.bot.send_message(personal_chat_id,
+                                                  'Please click on one of the buttons to proceed. If you are trying '
+                                                  'to specify device that was not in the list, click "Else"',
+                                                  reply_markup=markup)
+                            self.clear_pending_updates()
+                    else:
+                        print(f'[{utils.get_time()}] [REQ ERR] Either update does not contain message, or it was not '
+                              f'written in correct chat.\n\tChat dump:{update.message.chat} \n\tDump: {update}')
+                time.sleep(2)
+
+        def request_issue_type():
+            markup = types.ReplyKeyboardMarkup(row_width=2)
+            markup = generate_buttons(['Software', 'Hardware'], markup)
+            self.bot.send_message(personal_chat_id,
+                                  'Did you have a Software-related issue or Hardware-related issue?',
+                                  reply_markup=markup)
+
+            self.clear_pending_updates()
+            while True:
+                updates = self.bot.get_updates()
+                for update in updates:
+                    if update.message and str(update.message.chat.id) == personal_chat_id:
+                        if update.message.text.capitalize() in ['Software', 'Hardware']:
+                            return update.message.text.capitalize()
+                        else:
+                            print(f'[{utils.get_time()}] [REQ ERR SOL] Message {update.message.text} is neither '
+                                  f'Software, nor Hardware. Can not proceed..')
+                            self.bot.send_message(personal_chat_id,
+                                                  'Please specify either "Software" or "Hardware". If both of the issues'
+                                                  ' are related, please choose one that is closer', reply_markup=markup)
+                            self.clear_pending_updates()
+
+        def request_error_code(device_name, issue_type):
+            issues_and_codes = get_issues_and_codes(device_name, issue_type)
+            issues = []
+            codes = []
+
+            for issue, code in issues_and_codes:
+                issues.append(issue)
+                codes.append(code)
+            del issues_and_codes
+
+            markup = types.ReplyKeyboardMarkup(row_width=2)
+            markup = generate_buttons(issues, markup)
+            self.bot.send_message(personal_chat_id,
+                                  'Choose the type of error you had',
+                                  reply_markup=markup)
+
+            self.clear_pending_updates()
+            while True:
+                updates = self.bot.get_updates()
+                for update in updates:
+                    if update.message and str(update.message.chat.id) == personal_chat_id:
+                        if update.message.text in issues:  # and update.message.text in issues:
+                            err_cd = codes[issues.index(update.message.text)]
+                            return err_cd
+                        else:
+                            self.bot.send_message(personal_chat_id,
+                                                  'Please specify one of the given issues. If none of them are the '
+                                                  'one you would like to choose, than choose one that is closely '
+                                                  'related to it.\nPlease also contact @vova_ucs to tell them about '
+                                                  'new error type for this device', reply_markup=markup)
+                            self.clear_pending_updates()
+
+        def request_resolution_code(device_name, issue_type):
+            resolutions_and_codes = get_resolutions_and_codes(device_name, issue_type)
+            resolutions = []
+            codes = []
+            for resolution, code in resolutions_and_codes:
+                resolutions.append(resolution)
+                codes.append(code)
+            del resolutions_and_codes
+
+            markup = types.ReplyKeyboardMarkup(row_width=2)
+            markup = generate_buttons(resolutions, markup)
+            self.bot.send_message(personal_chat_id, 'Now specify how did you fix this issue', reply_markup=markup)
+            self.clear_pending_updates()
+            while True:
+                updates = self.bot.get_updates()
+                for update in updates:
+                    if update.message and str(update.message.chat.id) == personal_chat_id:
+                        if update.message.text in resolutions:
+                            res_cd = codes[resolutions.index(update.message.text)]
+                            return res_cd
+                    else:
+                        self.bot.send_message(personal_chat_id,
+                                              'Please specify one of the given resolutions. If none of them are the '
+                                              'one you would like to choose, than choose one that is closely '
+                                              'related to it.\nPlease also contact @vova_ucs to tell them about '
+                                              'new error type for this device', reply_markup=markup)
+                        self.clear_pending_updates()
+
+        def check_for_error(stop_event):
+            print(f'[{utils.get_time()}] [REQ ERR] Function for asking employee for error type has started...')
+            device_name = None
+            issue_type = None
+            error_code = None
+            resolution_code = None
+
             while not stop_event.is_set():
-                try:
-                    updates = self.bot.get_updates()
-                    for update in updates:
-                        if update.message and update.message.reply_to_message:
-                            if update.message.reply_to_message.message_id == id:
-                                print(f'[{utils.get_date_and_time()}] Reply to issue {id} received')
-                                stop_event.set()
-                                error_code = update.message.text.split(' ')[0]
-                                resol_code = update.message.text.split(' ')[1]
-                                self.support_data_wks.update_problem_resolution_codes(row, error_code, resol_code)
-                                self.send_message(f'Reply to issue {id} received and updated')
-                            else:
-                                print(f'This was a reply but not to correct message'
-                                      f'\nupdate.message.reply_to_message.message_id = '
-                                      f'{update.message.reply_to_message.message_id}\n'
-                                      f'ID - {id}')
-                except Exception as e:
-                    print(f'Error {e}!!!')
+                print(f'[{utils.get_time()}] [REQ ERR] while loop cycle with questioning employee with '
+                      f'device name, issue type, error code and resolution code. Current given data: '
+                      f'Device name - {device_name}, Issue type - {issue_type}, Error code - {error_code},'
+                      f' Resolution code - {resolution_code}.')
+                if device_name is None and issue_type is None and error_code is None:
+                    device_name = request_device_type()
+                    if device_name == 'Else':
+                        self.bot.send_message(personal_chat_id, "If not any of the specified devices didn't "
+                                                                "math the one you fixed, than you don't have to "
+                                                                "report on error code and issue code. Just leave "
+                                                                "it like that and contact @vova_ucs to discuss "
+                                                                "adding new device type...",
+                                              reply_markup=ReplyKeyboardRemove())
+                        stop_event.set()
+                        break
+                    else:
+                        print(f'[{utils.get_date_and_time()}] [REQ ERR] Device type in {restaurant_name} - {device_name}')
+                elif device_name and issue_type is None and error_code is None:
+                    issue_type = request_issue_type()
+                    print(f'[{utils.get_time()}] [REQ ERR] Issue type with device {device_name} - {issue_type}')
+                elif device_name and issue_type and error_code is None:
+                    error_code = request_error_code(device_name, issue_type)
+                    print(f'[{utils.get_time()}] [REQ ERR] Error code for {issue_type} issue with {device_name} is '
+                          f'{error_code}')
+                else:  # device_name, issue_type, error_code are not None
+                    resolution_code = request_resolution_code(device_name, issue_type)
+                    stop_event.set()
+                    self.send_message(f'Got update on issue in {restaurant_name} that was fixed by {employee}.'
+                                      f'\nError code - {error_code}, resolution code - {resolution_code}. Issue is '
+                                      f'now fully closed')
+                    self.bot.send_message(personal_chat_id, 'Thank you. All needed info was received and database in '
+                                                            'worksheet was updated, you can continue '
+                                                            'with your work or relaxation ;)',
+                                          reply_markup=ReplyKeyboardRemove())
+                    error_code = error_code.split(' ')[1]
+                    resolution_code = resolution_code.split(' ')[1]
+                    self.support_data_wks.update_problem_resolution_codes(row, error_code, resolution_code)
+
 
         if (time.time() - self.launch_time) <= self.INIT_DELAY:
             print(f'[{utils.get_time()}] [UCS MAIN CHANEL] Initialisation not yet complete. ⏰'
                   f'\n\t[REMAINING FOR INIT] {self.INIT_DELAY - (time.time() - self.launch_time)}')
             return  # If bot was started less than a minute ago
-        self.sent_messages.append(
-            (self.bot.send_message(chat_id=self.chat_id, text=f'{employee}, please specify '
-                                                              f'problem code and resolution code '
-                                                              f'for issue that you resolved in {restaurant_name}').message_id))
+
         stop_event = threading.Event()
-        threading.Thread(target=check_for_replies,
-                         args=(self.sent_messages[len(self.sent_messages) - 1],
-                               stop_event,)).start()
+        threading.Thread(target=check_for_error,
+                         args=(stop_event,)).start()
 
     def sender(self):
         while True:
@@ -185,13 +504,13 @@ class TelegramChanel:
                  TEST_TIMINGS=[0.1, 0.2, 0.3, 0.4, 0.5],
                  support_wks=None,
                  support_data_wks=None,
-                 thread_data = None
+                 thread_data=None
                  ):
         self.START_MUTED = START_MUTED
         self.TEST = TEST
         self.REQUEST_ERROR_RESOLUTION_CODE = REQUEST_ERROR_RESOLUTION_CODE
         self.INIT_DELAY = INIT_DELAY
-        if TEST:
+        if TEST and self.INIT_DELAY != 0:
             self.INIT_DELAY = 5
         self.PROD_TIMINGS = PROD_TIMINGS
         self.TEST_TIMINGS = TEST_TIMINGS
@@ -216,7 +535,8 @@ class TelegramChanel:
             self.ping_with_priority(priority=0)
         self.warning = 'no warning'
         print(
-            f'[{utils.get_time()}] [\t{self.str_name.upper()} TELEGRAM CHANEL] Initialising telegram chanel at chat {self.chat_id} '
+            f'[{utils.get_time()}] [\t{self.str_name.upper()} TELEGRAM CHANEL] Initialising telegram chanel at chat '
+            f'{self.chat_id} '
             f'... With this params: Status={self.status}, Warning={self.warning}, Language={self.language}')
         print(
             f'[{utils.get_time()}]\t [{self.str_name.upper()} TELEGRAM CHANEL] '
@@ -403,7 +723,8 @@ class TelegramChanel:
             # """-----------------------------------------------------------------------"""
 
             # """----------------Not an issue. Locking chanel for discussion------------------"""
-            elif is_from_ucs(message, self.employees) and (lowered_message == 'not an issue' or lowered_message == 'lock'):
+            elif is_from_ucs(message, self.employees) and (
+                    lowered_message == 'not an issue' or lowered_message == 'lock'):
                 # or 'kein problem' in lowered_message:
                 self.status = 'locked'
                 self.stop_event.set()
@@ -437,7 +758,7 @@ class TelegramChanel:
             elif self.status == 'unresolved' and self.warning == 'no warning' and is_resolution_message(message) \
                     and is_from_ucs(message, self.employees):
                 self.status = 'resolved'
-                with open ('restart_permission.txt', 'w') as file:
+                with open('restart_permission.txt', 'w') as file:
                     file.writelines(['Permited'])
                 if self.start_time is not None:
                     end_time = time.time()
@@ -451,6 +772,7 @@ class TelegramChanel:
                     else:
                         elapsed = "{} seconds".format(int(seconds))
                     resolved_by = is_from_ucs(message, self.employees)
+                    elapsed_time = round(elapsed_time)
                     rp_time = self.response_time - self.start_time
                     rp_time = round(rp_time)
 
@@ -459,31 +781,37 @@ class TelegramChanel:
                     remaining_seconds = rp_time % 3600
                     rp_minutes = remaining_seconds // 60
                     rp_seconds = remaining_seconds % 60
-                    if rp_hours>0:
+                    if rp_hours > 0:
                         rp_elapsed = f'{rp_hours} hours {rp_minutes} minutes {rp_seconds} seconds'
-                    elif rp_minutes>0:
+                    elif rp_minutes > 0:
                         rp_elapsed = f'{rp_minutes} minutes {rp_seconds} seconds'
                     else:
                         rp_elapsed = f'{rp_seconds} seconds'
-                    self.main_chanel.send_message(f'{self.str_name}\nIssue resolved by {is_from_ucs(message, self.employees)} in'
-                                                  f' {elapsed}.\nResponse time: {rp_elapsed}')
-                    print(f"[{utils.get_time()}] [{self.str_name.upper()} TG CHANEL] {is_from_ucs(message, self.employees)} resolved"
-                          f"issue in {elapsed}")
+                    self.main_chanel.send_message(
+                        f'{self.str_name}\nIssue resolved by {is_from_ucs(message, self.employees)} in'
+                        f' {elapsed}.\nResponse time: {rp_elapsed}')
+                    print(
+                        f"[{utils.get_time()}] [{self.str_name.upper()} TG CHANEL] "
+                        f"{is_from_ucs(message, self.employees)} resolved"
+                        f"issue in {elapsed}")
                     row = self.support_data_wks.upload_issue_data(
                         response_time=rp_time, resolution_time=elapsed_time,
                         person_name=is_from_ucs(message, self.employees), restaurant_name=self.str_name,
                         warning_status=self.responsed_at_warning_level
                     )
                     if self.REQUEST_ERROR_RESOLUTION_CODE:
-                        self.main_chanel.request_problem_resoluion_codes(row, is_from_ucs(message, self.employees), self.str_name)
+                        self.main_chanel.request_problem_resoluion_codes(row, is_from_ucs(message, self.employees),
+                                                                         self.str_name)
                     to_append = f'{datetime.datetime.now().strftime("%A, %dth %B, %H:%M:%S")} issue resolved by ' \
                                 f' {is_from_ucs(message, self.employees)} in ' \
                                 f'{elapsed_time} seconds. Response time: {end_time - self.response_time}\n'
                     with open(f'statistics/{is_from_ucs(message, self.employees).lower()}.txt', 'a') as f:
                         f.write(to_append)
                 else:
-                    print(f"[{utils.get_time()}] [{self.str_name.upper()} TG CHANEL] {is_from_ucs(message, self.employees)} "
-                          f"resolved issue")
+                    print(
+                        f"[{utils.get_time()}] [{self.str_name.upper()} TG CHANEL] "
+                        f"{is_from_ucs(message, self.employees)} "
+                        f"resolved issue")
                     self.send_message(f'Issue resolved by {is_from_ucs(message, self.employees)}')
             # """-----------------------------------------------------------------------"""
 
@@ -506,8 +834,6 @@ class TelegramChanel:
         except:
             print(f'[{utils.get_date_and_time()}] [{self.str_name}] Polling failed, restarting monitoring ‼️')
             self.restart_monitoring()
-
-
 
 
 def create_telegram_channel(dotenv_name,
@@ -585,25 +911,25 @@ def start_bot_chanel_threads(main_chanel, channel_params,
 
         bot_threads.append(
             threading.Thread(target=create_telegram_channel, args=
-                (
-                    channel_params[channel_name][0],
-                    bot,
-                    channel_params[channel_name][2],
-                    main_chanel,
-                    employees,
-                    START_MUTED,
-                    ASK_RESOL_STAT,
-                    REQUEST_ERROR_RESOLUTION_CODE,
-                    TEST,
-                    INIT_DELAY,
-                    PROD_TIMINGS,
-                    TEST_TIMINGS,
-                    support_wks,
-                    support_data_wks
-                )
+            (
+                channel_params[channel_name][0],
+                bot,
+                channel_params[channel_name][2],
+                main_chanel,
+                employees,
+                START_MUTED,
+                ASK_RESOL_STAT,
+                REQUEST_ERROR_RESOLUTION_CODE,
+                TEST,
+                INIT_DELAY,
+                PROD_TIMINGS,
+                TEST_TIMINGS,
+                support_wks,
+                support_data_wks
             )
+                             )
         )
-        bot_threads[len(bot_threads)-1].setName(f'THREAD_{channel_name.upper()}')
+        bot_threads[len(bot_threads) - 1].setName(f'THREAD_{channel_name.upper()}')
     for bot_thread in bot_threads:
         bot_thread.start()
         print(f'\n[{utils.get_time()}]\t[THREAD {channel_name.upper()}] Started ✅✅✅')

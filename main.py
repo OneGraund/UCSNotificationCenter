@@ -22,6 +22,7 @@ REQUEST_ERROR_RESOLUTION_CODE = False
 WORKSHEETS_UPD_INTERVALS = 5
 WORKSHEETS_OUTPUT_UPDATES = True
 FAST_START = False
+TELEPHONY = False
 PROD_TIMINGS = [3, 5, 7, 8, 10]
 TEST_TIMINGS = [0.5, 1, 1.25, 1.50, 1.75]
 HOST = (socket.gethostbyname(socket.gethostname()), 10000)
@@ -109,6 +110,8 @@ if __name__ == '__main__':
                         help="If specified, than outputs in terminal that buffer of wks was updated")
     parser.add_argument("--fast_start", action="store_true",
                         help="Fast start without init delay or any in case")
+    parser.add_argument("--telephony", action="store_true",
+                        help="If specified, run telephony thread server for calling")
 
     # Parse the command-line arguments
     args = parser.parse_args()
@@ -126,6 +129,8 @@ if __name__ == '__main__':
         NOTIFY_UCS_ON_START = True
     if args.req_err_resol:
         REQUEST_ERROR_RESOLUTION_CODE = True
+    if args.telephony:
+        TELEPHONY = True
     if args.telephony_ip is not None:
         new_HOST[0] = args.telephony_ip
     if args.telephony_port is not None:
@@ -158,10 +163,11 @@ if __name__ == '__main__':
           f'\t\tTELEPHONY_HOST={HOST}, WORKSHEETS_UPD_INTERVALS={WORKSHEETS_UPD_INTERVALS}\n'
           f'\t\tWORKSHEETS_OUTPUT_UPDATES={WORKSHEETS_OUTPUT_UPDATES}')
     print(f'[{utils.get_date_and_time()}] [MAIN SCRIPT] [EMPLOYEES] Employees that are in db: {employees}')
-    if TEST:
-        time.sleep(5)
-    else:
-        time.sleep(15)
+    if not FAST_START:
+        if TEST:
+            time.sleep(5)
+        else:
+            time.sleep(15)
 
     from bot import return_channels_to_init, UCSAustriaChanel, start_bot_chanel_threads
 
@@ -181,8 +187,9 @@ if __name__ == '__main__':
     to_init = return_channels_to_init(channel_params, TEST=False)
 
     # Initialise cellphone calling server that communicates later with android client
-    call_server = threading.Thread(target=sip_call.start_telephony_server, args=(HOST,))
-    call_server.start()
+    if TELEPHONY:
+        call_server = threading.Thread(target=sip_call.start_telephony_server, args=(HOST,))
+        call_server.start()
 
     ucs_chanel = None
     if not TEST:
