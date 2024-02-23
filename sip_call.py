@@ -8,6 +8,11 @@ import utils
 import threading
 import time
 import sys
+import os
+
+file_path = 'call_request.txt'
+
+
 
 SERVER_TIMEOUT = 1
 
@@ -36,6 +41,12 @@ def call_employee_with_priority(employees, priority, chanel_name=None):
 
 def start_telephony_server(HOST=('192.168.192.114', 10000)):
     CLIENTS = []
+
+    # Check if the file exists
+    if not os.path.isfile(file_path):
+        # If the file does not exist, create it
+        with open(file_path, 'w') as file:
+            file.write('')  # Create an empty file
 
     class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
         pass

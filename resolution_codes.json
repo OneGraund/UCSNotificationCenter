@@ -1,0 +1,72 @@
+{
+    "Kiosk": {
+        "Software": {
+            "Restart the application": "Resol 101",
+            "Check network settings and reconnect": "Resol 102",
+            "Perform a system update": "Resol 103",
+            "Reinstall the kiosk software": "Resol 104"
+        },
+        "Hardware": {
+            "Replace the hard drive": "Resol 201",
+            "Calibrate the touch screen": "Resol 202",
+            "Check printer cables and reconnect": "Resol 203",
+            "Ensure scanner is properly connected": "Resol 204"
+        }
+    },
+    "Kassa": {
+        "Software": {
+            "Ensure software is up to date": "Resol 105",
+            "Verify license key and reactivate": "Resol 106",
+            "Reset database connection": "Resol 107",
+            "Restore configuration from backup": "Resol 108"
+        },
+        "Hardware": {
+            "Clear printer jam and test printing": "Resol 205",
+            "Lubricate cash drawer mechanism": "Resol 206",
+            "Reset barcode scanner settings": "Resol 207",
+            "Replace or reset network adapter": "Resol 208"
+        }
+    },
+    "KDS": {
+        "Software": {
+            "Restart KDS software": "Resol 109",
+            "Check for order system integration issues": "Resol 110",
+            "Perform screen calibration": "Resol 111",
+            "Manually install software updates": "Resol 112"
+        },
+        "Hardware": {
+            "Check and replace monitor if necessary": "Resol 209",
+            "Re-calibrate the touch interface": "Resol 210",
+            "Check cooling system and clean fans": "Resol 211",
+            "Test and replace power supply if faulty": "Resol 212"
+        }
+    },
+    "QMS": {
+        "Software": {
+            "Restart QMS application": "Resol 113",
+            "Ensure printer is correctly integrated": "Resol 114",
+            "Synchronize displays manually": "Resol 115",
+            "Restart user interface application": "Resol 116"
+        },
+        "Hardware": {
+            "Refill printer paper and test printing": "Resol 213",
+            "Check and secure all display connections": "Resol 214",
+            "Replace or repair keypad": "Resol 215",
+            "Test and recalibrate QR code scanner": "Resol 216"
+        }
+    },
+    "Server": {
+        "Software": {
+            "Check server startup sequence and fix boot issues": "Resol 117",
+            "Apply critical updates manually": "Resol 118",
+            "Restore database from the latest backup": "Resol 119",
+            "Run a security audit and apply fixes": "Resol 120"
+        },
+        "Hardware": {
+            "Check and replace power supply unit": "Resol 217",
+            "Rebuild RAID array and restore data": "Resol 218",
+            "Improve server room ventilation": "Resol 219",
+            "Test RAM sticks and replace faulty ones": "Resol 220"
+        }
+    }
+}

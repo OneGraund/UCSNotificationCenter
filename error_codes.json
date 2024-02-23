@@ -1,0 +1,72 @@
+{
+    "Kiosk": {
+        "Software": {
+            "Kiosk software is stuck at loading screen": "Error 101",
+            "No connection to MID server": "Error 102",
+            "Blue screen of death": "Error 103",
+            "Software not launching": "Error 104"
+        },
+        "Hardware": {
+            "Hard drive failure": "Error 201",
+            "Touch screen unresponsive": "Error 202",
+            "Printer connection failure": "Error 203",
+            "Scanner not detected": "Error 204"
+        }
+    },
+    "Kassa": {
+        "Software": {
+            "Software not launching": "Error 105",
+            "License validation failed": "Error 106",
+            "Database synchronization error": "Error 107",
+            "Configuration file missing": "Error 108"
+        },
+        "Hardware": {
+            "Receipt printer jam": "Error 205",
+            "Cash drawer stuck": "Error 206",
+            "Barcode scanner malfunction": "Error 207",
+            "Network adapter failure": "Error 208"
+        }
+    },
+    "KDS": {
+        "Software": {
+            "Software not launching": "Error 109",
+            "Order sync delay": "Error 110",
+            "Screen calibration lost": "Error 111",
+            "Update installation error": "Error 112"
+        },
+        "Hardware": {
+            "Monitor backlight failure": "Error 209",
+            "Touch screen calibration issue": "Error 210",
+            "CPU overheating": "Error 211",
+            "Power supply failure": "Error 212"
+        }
+    },
+    "QMS": {
+        "Software": {
+            "Software not launching": "Error 113",
+            "Ticket printer integration error": "Error 114",
+            "Real-time display sync error": "Error 115",
+            "User interface freeze": "Error 116"
+        },
+        "Hardware": {
+            "Ticket printer out of paper": "Error 213",
+            "Display connection loose": "Error 214",
+            "Keypad not responding": "Error 215",
+            "QR code scanner not working": "Error 216"
+        }
+    },
+    "Server": {
+        "Software": {
+            "Server boot failure": "Error 117",
+            "Critical update failure": "Error 118",
+            "Database corruption": "Error 119",
+            "Security breach detected": "Error 120"
+        },
+        "Hardware": {
+            "Server power supply malfunction": "Error 217",
+            "RAID array failure": "Error 218",
+            "Overheating due to improper ventilation": "Error 219",
+            "RAM failure": "Error 220"
+        }
+    }
+}

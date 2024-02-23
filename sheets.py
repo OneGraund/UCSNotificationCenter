@@ -46,13 +46,32 @@ def read_lists_from_file(filename):
 class Spreadsheet:
     def __init__(self):
         self.spreadsheet_name = os.getenv('GOOGLE_SHEETS_SPREADSHEET_NAME')
-        print(f'[{utils.get_time()}] [SPREADSHEET {self.spreadsheet_name.upper()}] Opening spreadsheet {self.spreadsheet_name}')
+        print(f'[{utils.get_time()}] [SPREADSHEET {self.spreadsheet_name.upper()}] '
+              f'Opening spreadsheet {self.spreadsheet_name}')
         self.service_account = gspread.service_account('./service_account.json')
-        self.spreadsheet = self.service_account.open(self.spreadsheet_name)
-        print(f'[{utils.get_time()}] [SPREADSHEET {self.spreadsheet_name.upper()}] Spreadsheet opened successfully ✅ \n\t'
-              f'Available worksheets: ')
+        self.spreadsheet = self.establish_gspread_connection(self.spreadsheet_name)
+
+        print(f'[{utils.get_time()}] [SPREADSHEET {self.spreadsheet_name.upper()}] '
+              f'Spreadsheet opened successfully ✅ \n\tAvailable worksheets: ')
         for wks in self.spreadsheet.worksheets():
             print(f'\t{wks}')
+
+    def establish_gspread_connection(self, spreadsheet_name):
+        spreadsheet = None
+        for i in range(0, 5):
+            try:
+                spreadsheet = self.service_account.open(spreadsheet_name)
+                connection_error = None
+            except Exception as e:
+                connection_error = str(e)
+            if connection_error:
+                print(f'[{utils.get_date_and_time()}] [ERROR CONNECTING WITH GSPREAD] Gspread '
+                      f'could not open spreadsheet {spreadsheet_name}. Retrying after 10 seconds...')
+                time.sleep(10)
+            else:
+                print(f'[{utils.get_time()}] [GSPREAD] Connected to spreadsheet {spreadsheet_name} successfully')
+                break
+        return spreadsheet
 
 
 class Worksheet(Spreadsheet):
@@ -65,7 +84,8 @@ class Worksheet(Spreadsheet):
         self.worksheet = self.spreadsheet.worksheet(worksheet_name)
         self.buff = self.worksheet.get_all_values()
         write_lists_to_file(self.buff, f'{self.worksheet_name}_buff.txt')
-        print(f'[{utils.get_time()}] [WORKSHEET {worksheet_name.upper()}] Opened worksheet and created buff in {worksheet_name}_buff.txt ✅')
+        print(f'[{utils.get_time()}] [WORKSHEET {worksheet_name.upper()}] Opened worksheet and created buff in '
+              f'{worksheet_name}_buff.txt ✅')
         print(f'[{utils.get_time()}] [WORKSHEET {worksheet_name.upper()}] Starting buff updater...')
         buff_updater_thread = threading.Thread(target=self.buff_updater, args=())
         buff_updater_thread.start()
@@ -88,8 +108,8 @@ class Worksheet(Spreadsheet):
                           f'could not establish connection to google sheets...')
                     time.sleep(4)
                     if i == 3:
-                        print(f'[BUFFER NOT UPDATE] Could not update buffer for {self.worksheet_name.upper()} because of '
-                              f'error when connecting to google sheets API...')
+                        print(f'[BUFFER NOT UPDATE] Could not update buffer for {self.worksheet_name.upper()} because '
+                              f'of error when connecting to google sheets API...')
                 else:
                     break
             if self.OUTPUT_UPDATES:
@@ -115,7 +135,8 @@ class SupportWKS(Worksheet):
                 self.worksheet.update(f'D{at_row}', holiday_payment)
                 print(f'\t[{utils.get_date_and_time()}][SUPPORT WORKSHEET] Today is holiday, updated payment 🎁')
             else:
-                print(f'[{utils.get_date_and_time()}]\t[SUPPORT WORKSHEET] Today is not a holiday, therefore  I am not changing payment')
+                print(f'[{utils.get_date_and_time()}]\t[SUPPORT WORKSHEET] Today is not a holiday, therefore  I am '
+                      f'not changing payment')
             time.sleep(24 * 60 * 60)
 
     def supporting_today(self):

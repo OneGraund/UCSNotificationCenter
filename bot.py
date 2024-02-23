@@ -1,6 +1,7 @@
 import datetime
 import logging
 import os
+import json
 import dotenv
 import threading
 import time
@@ -12,151 +13,11 @@ from sip_call import call_employee_with_priority
 
 dotenv.load_dotenv()
 
-issues_dict = {
-    'Kiosk': {
-        'Software': {
-            'Kiosk soft issue 1': 'Error 101',
-            'Kiosk soft issue 2': 'Error 102',
-            'Kiosk soft issue 3': 'Error 103',
-            'Kiosk soft issue 4': 'Error 104',
-        },
-        'Hardware': {
-            'Kiosk hard issue 1': 'Error 201',
-            'Kiosk hard issue 2': 'Error 202',
-            'Kiosk hard issue 3': 'Error 203',
-            'Kiosk hard issue 4': 'Error 204',
-        },
-    },
-    'Kassa': {
-        'Software': {
-            'Kassa soft issue 1': 'Error 105',
-            'Kassa soft issue 2': 'Error 106',
-            'Kassa soft issue 3': 'Error 107',
-            'Kassa soft issue 4': 'Error 108',
-        },
-        'Hardware': {
-            'Kassa hard issue 1': 'Error 205',
-            'Kassa hard issue 2': 'Error 206',
-            'Kassa hard issue 3': 'Error 207',
-            'Kassa hard issue 4': 'Error 208',
-        },
-    },
-    'KDS': {
-        'Software': {
-            'KDS soft issue 1': 'Error 109',
-            'KDS soft issue 2': 'Error 110',
-            'KDS soft issue 3': 'Error 111',
-            'KDS soft issue 4': 'Error 112',
-        },
-        'Hardware': {
-            'KDS hard issue 1': 'Error 209',
-            'KDS hard issue 2': 'Error 210',
-            'KDS hard issue 3': 'Error 211',
-            'KDS hard issue 4': 'Error 212',
-        },
-    },
-    'QMS': {
-        'Software': {
-            'QMS soft issue 1': 'Error 113',
-            'QMS soft issue 2': 'Error 114',
-            'QMS soft issue 3': 'Error 115',
-            'QMS soft issue 4': 'Error 116',
-        },
-        'Hardware': {
-            'QMS hard issue 1': 'Error 213',
-            'QMS hard issue 2': 'Error 214',
-            'QMS hard issue 3': 'Error 215',
-            'QMS hard issue 4': 'Error 216',
-        },
-    },
-    'Server': {
-        'Software': {
-            'Server soft issue 1': 'Error 117',
-            'Server soft issue 2': 'Error 118',
-            'Server soft issue 3': 'Error 119',
-            'Server soft issue 4': 'Error 120',
-        },
-        'Hardware': {
-            'Server hard issue 1': 'Error 217',
-            'Server hard issue 2': 'Error 218',
-            'Server hard issue 3': 'Error 219',
-            'Server hard issue 4': 'Error 220',
-        },
-    },
-}
+with open('error_codes.json', 'r') as error_codes_file:
+    issues_dict = json.load(error_codes_file)
 
-resol_dict = {
-    'Kiosk': {
-        'Software': {
-            'Resolution method 1': 'Resol 101',
-            'Resolution method 2': 'Resol 102',
-            'Resolution method 3': 'Resol 103',
-            'Resolution method 4': 'Resol 104',
-        },
-        'Hardware': {
-            'Resolution method 1': 'Resol 201',
-            'Resolution method 2': 'Resol 202',
-            'Resolution method 3': 'Resol 203',
-            'Resolution method 4': 'Resol 204',
-        },
-    },
-    'Kassa': {
-        'Software': {
-            'Resolution method 1': 'Resol 105',
-            'Resolution method 2': 'Resol 106',
-            'Resolution method 3': 'Resol 107',
-            'Resolution method 4': 'Resol 108',
-        },
-        'Hardware': {
-            'Resolution method 1': 'Resol 205',
-            'Resolution method 2': 'Resol 206',
-            'Resolution method 3': 'Resol 207',
-            'Resolution method 4': 'Resol 208',
-        },
-    },
-    'KDS': {
-        'Software': {
-            'Resolution method 1': 'Resol 109',
-            'Resolution method 2': 'Resol 110',
-            'Resolution method 3': 'Resol 111',
-            'Resolution method 4': 'Resol 112',
-        },
-        'Hardware': {
-            'Resolution method 1': 'Resol 209',
-            'Resolution method 2': 'Resol 210',
-            'Resolution method 3': 'Resol 211',
-            'Resolution method 4': 'Resol 212',
-        },
-    },
-    'QMS': {
-        'Software': {
-            'Resolution method 1': 'Resol 113',
-            'Resolution method 2': 'Resol 114',
-            'Resolution method 3': 'Resol 115',
-            'Resolution method 4': 'Resol 116',
-        },
-        'Hardware': {
-            'Resolution method 1': 'Resol 213',
-            'Resolution method 2': 'Resol 214',
-            'Resolution method 3': 'Resol 215',
-            'Resolution method 4': 'Resol 216',
-        },
-    },
-    'Server': {
-        'Software': {
-            'Resolution method 1': 'Resol 117',
-            'Resolution method 2': 'Resol 118',
-            'Resolution method 3': 'Resol 119',
-            'Resolution method 4': 'Resol 120',
-        },
-        'Hardware': {
-            'Resolution method 1': 'Resol 217',
-            'Resolution method 2': 'Resol 218',
-            'Resolution method 3': 'Resol 219',
-            'Resolution method 4': 'Resol 220',
-        },
-    },
-}
+with open('resolution_codes.json', 'r') as resolution_codes_file:
+    resol_dict = json.load(resolution_codes_file)
 
 device_types = list(issues_dict.keys())
 
@@ -190,11 +51,10 @@ def is_from_ucs(message, employees=None):
                                  os.getenv(f"{employee.upper()}_SECOND_TELEGRAM_USERNAME")])
             else:
                 tg_names.append([os.getenv(f"{employee.upper()}_TELEGRAM_USERNAME")])
-        # print(f'\t[TG USERNAMES FETCHED] From is_from_ucs i got this tg usernames {tg_names}')
+
         for emp_id, tg_username in enumerate(tg_names):
             for id, sub_array in enumerate(tg_username):
                 if message.from_user.username == sub_array:
-                    # print(f'\t\t[IS_FROM_UCS] Found employee {employees[emp_id]}')
                     return employees[emp_id]
         return False
     else:
@@ -337,7 +197,7 @@ class UCSAustriaChanel:
 
         def request_issue_type():
             markup = types.ReplyKeyboardMarkup(row_width=2)
-            markup = generate_buttons(['Software', 'Hardware'], markup)
+            markup = generate_buttons(['Back 🔙', 'Software', 'Hardware'], markup)
             self.bot.send_message(personal_chat_id,
                                   'Did you have a Software-related issue or Hardware-related issue?',
                                   reply_markup=markup)
@@ -349,6 +209,9 @@ class UCSAustriaChanel:
                     if update.message and str(update.message.chat.id) == personal_chat_id:
                         if update.message.text.capitalize() in ['Software', 'Hardware']:
                             return update.message.text.capitalize()
+                        elif update.message.text.capitalize() == 'Back 🔙':
+                            # Get back to choosing device
+                            return 'Back'
                         else:
                             print(f'[{utils.get_time()}] [REQ ERR SOL] Message {update.message.text} is neither '
                                   f'Software, nor Hardware. Can not proceed..')
@@ -367,6 +230,7 @@ class UCSAustriaChanel:
                 codes.append(code)
             del issues_and_codes
 
+            issues = ['Back 🔙'] + issues
             markup = types.ReplyKeyboardMarkup(row_width=2)
             markup = generate_buttons(issues, markup)
             self.bot.send_message(personal_chat_id,
@@ -378,9 +242,13 @@ class UCSAustriaChanel:
                 updates = self.bot.get_updates()
                 for update in updates:
                     if update.message and str(update.message.chat.id) == personal_chat_id:
-                        if update.message.text in issues:  # and update.message.text in issues:
-                            err_cd = codes[issues.index(update.message.text)]
+                        print(f'Got message text "{update.message.text}"')
+                        if update.message.text in issues[1:]:  # and update.message.text in issues:
+                            err_cd = codes[issues.index(update.message.text)-1]
                             return err_cd
+                        elif update.message.text == 'Back 🔙':
+                            # Get back to choosing issue type
+                            return 'Back'
                         else:
                             self.bot.send_message(personal_chat_id,
                                                   'Please specify one of the given issues. If none of them are the '
@@ -397,6 +265,7 @@ class UCSAustriaChanel:
                 resolutions.append(resolution)
                 codes.append(code)
             del resolutions_and_codes
+            resolutions = ['Back 🔙'] + resolutions
 
             markup = types.ReplyKeyboardMarkup(row_width=2)
             markup = generate_buttons(resolutions, markup)
@@ -406,16 +275,18 @@ class UCSAustriaChanel:
                 updates = self.bot.get_updates()
                 for update in updates:
                     if update.message and str(update.message.chat.id) == personal_chat_id:
-                        if update.message.text in resolutions:
-                            res_cd = codes[resolutions.index(update.message.text)]
+                        if update.message.text in resolutions[1:]:
+                            res_cd = codes[resolutions.index(update.message.text)-1]
                             return res_cd
-                    else:
-                        self.bot.send_message(personal_chat_id,
-                                              'Please specify one of the given resolutions. If none of them are the '
-                                              'one you would like to choose, than choose one that is closely '
-                                              'related to it.\nPlease also contact @vova_ucs to tell them about '
-                                              'new error type for this device', reply_markup=markup)
-                        self.clear_pending_updates()
+                        elif update.message.text == 'Back 🔙':
+                            return 'Back'
+                        else:
+                            self.bot.send_message(personal_chat_id,
+                                                  'Please specify one of the given resolutions. If none of them are the '
+                                                  'one you would like to choose, than choose one that is closely '
+                                                  'related to it.\nPlease also contact @vova_ucs to tell them about '
+                                                  'new error type for this device', reply_markup=markup)
+                            self.clear_pending_updates()
 
         def check_for_error(stop_event):
             print(f'[{utils.get_time()}] [REQ ERR] Function for asking employee for error type has started...')
@@ -442,15 +313,34 @@ class UCSAustriaChanel:
                         break
                     else:
                         print(f'[{utils.get_date_and_time()}] [REQ ERR] Device type in {restaurant_name} - {device_name}')
+
                 elif device_name and issue_type is None and error_code is None:
                     issue_type = request_issue_type()
+                    if issue_type == 'Back':
+                        print('Back was chosen for issue type, going back')
+                        issue_type = None
+                        device_name = None
+                        continue
                     print(f'[{utils.get_time()}] [REQ ERR] Issue type with device {device_name} - {issue_type}')
+
                 elif device_name and issue_type and error_code is None:
                     error_code = request_error_code(device_name, issue_type)
+                    if error_code == 'Back':
+                        print('Back was chosen for error_code going back')
+                        error_code = None
+                        issue_type = None
+                        continue
                     print(f'[{utils.get_time()}] [REQ ERR] Error code for {issue_type} issue with {device_name} is '
                           f'{error_code}')
+
                 else:  # device_name, issue_type, error_code are not None
                     resolution_code = request_resolution_code(device_name, issue_type)
+                    print(f'Resolution code - {resolution_code}')
+                    if resolution_code == 'Back':
+                        print('Back was chosen for resolution_code, going back')
+                        resolution_code = None
+                        error_code = None
+                        continue
                     stop_event.set()
                     self.send_message(f'Got update on issue in {restaurant_name} that was fixed by {employee}.'
                                       f'\nError code - {error_code}, resolution code - {resolution_code}. Issue is '
@@ -812,7 +702,7 @@ class TelegramChanel:
                         f"[{utils.get_time()}] [{self.str_name.upper()} TG CHANEL] "
                         f"{is_from_ucs(message, self.employees)} "
                         f"resolved issue")
-                    self.send_message(f'Issue resolved by {is_from_ucs(message, self.employees)}')
+                    self.main_chanel.send_message(f'Issue resolved by {is_from_ucs(message, self.employees)}')
             # """-----------------------------------------------------------------------"""
 
             # """----------------------Nothing happened---------------------------------"""
