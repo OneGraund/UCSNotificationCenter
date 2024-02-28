@@ -12,6 +12,7 @@ from telebot.types import ReplyKeyboardRemove
 from sip_call import call_employee_with_priority
 
 dotenv.load_dotenv()
+NOTIFY_DONE_INTERVAL_MIN = 0.5
 
 with open('error_codes.json', 'r') as error_codes_file:
     issues_dict = json.load(error_codes_file)
@@ -242,7 +243,6 @@ class UCSAustriaChanel:
                 updates = self.bot.get_updates()
                 for update in updates:
                     if update.message and str(update.message.chat.id) == personal_chat_id:
-                        print(f'Got message text "{update.message.text}"')
                         if update.message.text in issues[1:]:  # and update.message.text in issues:
                             err_cd = codes[issues.index(update.message.text)-1]
                             return err_cd
@@ -304,7 +304,7 @@ class UCSAustriaChanel:
                     device_name = request_device_type()
                     if device_name == 'Else':
                         self.bot.send_message(personal_chat_id, "If not any of the specified devices didn't "
-                                                                "math the one you fixed, than you don't have to "
+                                                                "match the one you fixed, than you don't have to "
                                                                 "report on error code and issue code. Just leave "
                                                                 "it like that and contact @vova_ucs to discuss "
                                                                 "adding new device type...",
@@ -335,7 +335,6 @@ class UCSAustriaChanel:
 
                 else:  # device_name, issue_type, error_code are not None
                     resolution_code = request_resolution_code(device_name, issue_type)
-                    print(f'Resolution code - {resolution_code}')
                     if resolution_code == 'Back':
                         print('Back was chosen for resolution_code, going back')
                         resolution_code = None
@@ -405,6 +404,8 @@ class TelegramChanel:
         self.PROD_TIMINGS = PROD_TIMINGS
         self.TEST_TIMINGS = TEST_TIMINGS
         self.start_time = None
+        self.who_answered_to_report = None
+        self.last_msg_time = None
         self.support_wks = support_wks
         self.support_data_wks = support_data_wks
         self.employees = employees
@@ -416,6 +417,7 @@ class TelegramChanel:
         self.language = language
         self.thread_data = thread_data
         self.main_chanel = main_chanel
+
 
         if not ASK_RESOL_STAT:
             self.status = 'resolved'
@@ -432,7 +434,25 @@ class TelegramChanel:
             f'[{utils.get_time()}]\t [{self.str_name.upper()} TELEGRAM CHANEL] '
             f'Starting message handler (incoming messages monitoring)...')
 
+        threading.Thread(target=self.sender).start()
+
         self.start_monitoring()
+
+    def sender(self):
+        print(f'[{utils.get_time()}] [{self.str_name.upper()} TG CH] Sender has been started!')
+
+        while True:
+            if self.last_msg_time is not None:
+                end_time = time.time()
+                elapsed_time = end_time - self.last_msg_time
+                hours, rem = divmod(elapsed_time, 3600)
+                minutes, seconds = divmod(rem, 60)
+                if self.status == 'unresolved' and self.warning == 'no warning' and minutes >= NOTIFY_DONE_INTERVAL_MIN:
+                    self.send_message('Is it done?')
+                    self.last_msg_time = time.time()
+                    if self.who_answered_to_report is not None:
+                        self.ping(self.who_answered_to_report)
+            time.sleep(1)
 
     def send_message(self, message):
         print(f'[{utils.get_time()}] [{self.str_name} CHANNEL] Sending this message to chanel: 💬⬆️\n\t{message}')
@@ -514,6 +534,7 @@ class TelegramChanel:
             print(f'[{utils.get_date_and_time()}] [{self.str_name.upper()} [WARNING ISSUE THREAD] An error occurred '
                   f'when running issue thread: {e}')
 
+
     def ping(self, employee_name):
         print(f'[{utils.get_time()}]\t[PINGING] {employee_name} has been pinged ⚠️')
         if os.getenv(f'{employee_name.upper()}_SECOND_TELEGRAM_USERNAME') != '':  # In case employee has second tg user
@@ -556,6 +577,7 @@ class TelegramChanel:
 
         @self.bot.message_handler(func=lambda message: True)
         def monitor_incoming(message):
+            self.last_msg_time = time.time()
             if message.photo == None:
                 lowered_message = message.text.lower()
             else:
@@ -614,7 +636,7 @@ class TelegramChanel:
 
             # """----------------Not an issue. Locking chanel for discussion------------------"""
             elif is_from_ucs(message, self.employees) and (
-                    lowered_message == 'not an issue' or lowered_message == 'lock'):
+                    lowered_message == 'not an issue' or lowered_message == 'lock' or lowered_message == 'not a issue'):
                 # or 'kein problem' in lowered_message:
                 self.status = 'locked'
                 self.stop_event.set()
@@ -632,13 +654,13 @@ class TelegramChanel:
 
             # """-------------Remove warning, but leave unresolved status---------------"""
             elif is_from_ucs(message, self.employees) and self.status == 'unresolved' and self.warning != 'no warning':
-                who_answered_to_report = is_from_ucs(message, self.employees)
-                self.send_message(f'{who_answered_to_report} is now resolving the issue in {self.str_name} after '
+                self.who_answered_to_report = is_from_ucs(message, self.employees)
+                self.send_message(f'{self.who_answered_to_report} is now resolving the issue in {self.str_name} after '
                                   f'{self.warning}')
                 self.responsed_at_warning_level = self.warning
                 self.stop_event.set()
                 self.response_time = time.time()
-                print(f"[{utils.get_time()}] [{self.str_name.upper()} TG CHANEL] {who_answered_to_report} replied to "
+                print(f"[{utils.get_time()}] [{self.str_name.upper()} TG CHANEL] {self.who_answered_to_report} replied to "
                       f"report and is now managing situation. Status: 'unresolved', Warning: no warning ❤️")
                 self.warning = 'no warning'
                 # del self.warning_thread
