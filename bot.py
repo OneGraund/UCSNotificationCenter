@@ -12,7 +12,7 @@ from telebot.types import ReplyKeyboardRemove
 from sip_call import call_employee_with_priority
 
 dotenv.load_dotenv()
-NOTIFY_DONE_INTERVAL_MIN = 0.5
+NOTIFY_DONE_INTERVAL_MIN = 1
 
 with open('error_codes.json', 'r') as error_codes_file:
     issues_dict = json.load(error_codes_file)
@@ -42,6 +42,9 @@ def is_from_ucs(message, employees=None):
     # First we want to parse all employes telegram usernames in format of arrays, where main array contains
     # subarrays even if employe has only one telegram username
     # employes: [Vova, Egor, Yaro, Ivan, Igor, Alex] -> tg_usernames: [[vova_ucs, onegraund], [noname, egor_ucs], …]
+
+    if message is None:
+        return 'Bot'
 
     if employees:
         tg_names = []
@@ -164,6 +167,9 @@ class UCSAustriaChanel:
 
     def request_problem_resoluion_codes(self, row, employee, restaurant_name):
         personal_chat_id = str(os.getenv(f'{employee.upper()}_TELEGRAM_ID'))
+
+        if employee == 'Bot':
+            return
 
         def request_device_type():
             markup = types.ReplyKeyboardMarkup(row_width=2)
@@ -406,6 +412,7 @@ class TelegramChanel:
         self.start_time = None
         self.who_answered_to_report = None
         self.last_msg_time = None
+        self.done_reminders_sent = 0
         self.support_wks = support_wks
         self.support_data_wks = support_data_wks
         self.employees = employees
@@ -447,11 +454,21 @@ class TelegramChanel:
                 elapsed_time = end_time - self.last_msg_time
                 hours, rem = divmod(elapsed_time, 3600)
                 minutes, seconds = divmod(rem, 60)
-                if self.status == 'unresolved' and self.warning == 'no warning' and minutes >= NOTIFY_DONE_INTERVAL_MIN:
-                    self.send_message('Is it done?')
-                    self.last_msg_time = time.time()
-                    if self.who_answered_to_report is not None:
-                        self.ping(self.who_answered_to_report)
+                # print(f'Elapsed: {hours} hours {minutes} minutes {seconds} seconds after last message')
+                if self.status == 'unresolved' and self.warning == 'no warning' and minutes >= NOTIFY_DONE_INTERVAL_MIN\
+                        and hours < 474761:   # I mean this is because strangely it tries to substract, soooo
+                    if self.done_reminders_sent >= 3:
+                        self.send_message('Closing issue automatically after 3 requests to close it manually')
+                        print(f'[{utils.get_time()}] [{self.str_name.upper()} TG CH] Setting status to resolved after '
+                              f'3 notifications to {self.who_answered_to_report} to close an issue')
+                        self.set_status_to_resolved()
+
+                    else:
+                        self.send_message('Is it done?')
+                        self.last_msg_time = time.time()
+                        self.done_reminders_sent += 1
+                        if self.who_answered_to_report is not None:
+                            self.ping(self.who_answered_to_report)
             time.sleep(1)
 
     def send_message(self, message):
@@ -568,6 +585,64 @@ class TelegramChanel:
                   f'given. Priority = {priority}')
             return None
 
+    def set_status_to_resolved(self, message=None):
+        self.status = 'resolved'
+        self.done_reminders_sent = 0
+        with open('restart_permission.txt', 'w') as file:
+            file.writelines(['Permited'])
+        if self.start_time is not None:
+            end_time = time.time()
+            elapsed_time = end_time - self.start_time
+            hours, rem = divmod(elapsed_time, 3600)
+            minutes, seconds = divmod(rem, 60)
+            if hours > 0:
+                elapsed = "{} hours {} minutes {} seconds".format(int(hours), int(minutes), int(seconds))
+            elif minutes > 0:
+                elapsed = "{} minutes {} seconds".format(int(minutes), int(seconds))
+            else:
+                elapsed = "{} seconds".format(int(seconds))
+            elapsed_time = round(elapsed_time)
+            rp_time = self.response_time - self.start_time
+            rp_time = round(rp_time)
+
+            # Calculate hours, minutes, and seconds
+            rp_hours = rp_time // 3600
+            remaining_seconds = rp_time % 3600
+            rp_minutes = remaining_seconds // 60
+            rp_seconds = remaining_seconds % 60
+            if rp_hours > 0:
+                rp_elapsed = f'{rp_hours} hours {rp_minutes} minutes {rp_seconds} seconds'
+            elif rp_minutes > 0:
+                rp_elapsed = f'{rp_minutes} minutes {rp_seconds} seconds'
+            else:
+                rp_elapsed = f'{rp_seconds} seconds'
+            self.main_chanel.send_message(
+                f'{self.str_name}\nIssue resolved by {is_from_ucs(message, self.employees)} in'
+                f' {elapsed}.\nResponse time: {rp_elapsed}')
+            print(
+                f"[{utils.get_time()}] [{self.str_name.upper()} TG CHANEL] "
+                f"{is_from_ucs(message, self.employees)} resolved"
+                f"issue in {elapsed}")
+            row = self.support_data_wks.upload_issue_data(
+                response_time=rp_time, resolution_time=elapsed_time,
+                person_name=is_from_ucs(message, self.employees), restaurant_name=self.str_name,
+                warning_status=self.responsed_at_warning_level
+            )
+            if self.REQUEST_ERROR_RESOLUTION_CODE:
+                self.main_chanel.request_problem_resoluion_codes(row, is_from_ucs(message, self.employees),
+                                                                 self.str_name)
+            to_append = f'{datetime.datetime.now().strftime("%A, %dth %B, %H:%M:%S")} issue resolved by ' \
+                        f' {is_from_ucs(message, self.employees)} in ' \
+                        f'{elapsed_time} seconds. Response time: {end_time - self.response_time}\n'
+            with open(f'statistics/{is_from_ucs(message, self.employees).lower()}.txt', 'a') as f:
+                f.write(to_append)
+        else:
+            print(
+                f"[{utils.get_time()}] [{self.str_name.upper()} TG CHANEL] "
+                f"{is_from_ucs(message, self.employees)} "
+                f"resolved issue")
+            self.main_chanel.send_message(f'Issue resolved by {is_from_ucs(message, self.employees)}')
+
     def restart_monitoring(self):
         self.start_monitoring()
 
@@ -624,6 +699,7 @@ class TelegramChanel:
                 print(f'[{utils.get_time()}] [{self.str_name} TELEGRAM CHANEL] New issue report ⚠! Warning level 0')
                 self.status = 'unresolved'
                 self.warning = 'warning0'
+                self.done_reminders_sent = 0
                 self.start_time = time.time()
                 self.ping_with_priority(priority=0)
                 print(
@@ -641,6 +717,7 @@ class TelegramChanel:
                 self.status = 'locked'
                 self.stop_event.set()
                 self.warning = 'no warning'
+                self.done_reminders_sent = 0
                 print(f'[{utils.get_time()}] [{self.str_name.upper()} TG CHANEL] false issue. Setting to locked :|')
                 self.send_message('Okay, removing issue. Locking bot for further discussion. Type "Unlock" to unlock')
             # """-----------------------------------------------------------------------"""
@@ -648,6 +725,7 @@ class TelegramChanel:
             # """-----------------Unlocking chanel--------------------------------------"""
             elif is_from_ucs(message, self.employees) and lowered_message == 'unlock' and self.status == 'locked':
                 self.status = 'resolved'
+                self.done_reminders_sent = 0
                 print(f'[{utils.get_time()} [{self.str_name.upper()} TG CHANEL] unlocking chanel for further monitor')
                 self.send_message('Chanel unlocked, continuing monitoring')
             # """-----------------------------------------------------------------------"""
@@ -663,68 +741,14 @@ class TelegramChanel:
                 print(f"[{utils.get_time()}] [{self.str_name.upper()} TG CHANEL] {self.who_answered_to_report} replied to "
                       f"report and is now managing situation. Status: 'unresolved', Warning: no warning ❤️")
                 self.warning = 'no warning'
+                self.done_reminders_sent = 0
                 # del self.warning_thread
             # """-----------------------------------------------------------------------"""
 
             # """-----------------------Set status to resolved--------------------------"""
             elif self.status == 'unresolved' and self.warning == 'no warning' and is_resolution_message(message) \
                     and is_from_ucs(message, self.employees):
-                self.status = 'resolved'
-                with open('restart_permission.txt', 'w') as file:
-                    file.writelines(['Permited'])
-                if self.start_time is not None:
-                    end_time = time.time()
-                    elapsed_time = end_time - self.start_time
-                    hours, rem = divmod(elapsed_time, 3600)
-                    minutes, seconds = divmod(rem, 60)
-                    if hours > 0:
-                        elapsed = "{} hours {} minutes {} seconds".format(int(hours), int(minutes), int(seconds))
-                    elif minutes > 0:
-                        elapsed = "{} minutes {} seconds".format(int(minutes), int(seconds))
-                    else:
-                        elapsed = "{} seconds".format(int(seconds))
-                    resolved_by = is_from_ucs(message, self.employees)
-                    elapsed_time = round(elapsed_time)
-                    rp_time = self.response_time - self.start_time
-                    rp_time = round(rp_time)
-
-                    # Calculate hours, minutes, and seconds
-                    rp_hours = rp_time // 3600
-                    remaining_seconds = rp_time % 3600
-                    rp_minutes = remaining_seconds // 60
-                    rp_seconds = remaining_seconds % 60
-                    if rp_hours > 0:
-                        rp_elapsed = f'{rp_hours} hours {rp_minutes} minutes {rp_seconds} seconds'
-                    elif rp_minutes > 0:
-                        rp_elapsed = f'{rp_minutes} minutes {rp_seconds} seconds'
-                    else:
-                        rp_elapsed = f'{rp_seconds} seconds'
-                    self.main_chanel.send_message(
-                        f'{self.str_name}\nIssue resolved by {is_from_ucs(message, self.employees)} in'
-                        f' {elapsed}.\nResponse time: {rp_elapsed}')
-                    print(
-                        f"[{utils.get_time()}] [{self.str_name.upper()} TG CHANEL] "
-                        f"{is_from_ucs(message, self.employees)} resolved"
-                        f"issue in {elapsed}")
-                    row = self.support_data_wks.upload_issue_data(
-                        response_time=rp_time, resolution_time=elapsed_time,
-                        person_name=is_from_ucs(message, self.employees), restaurant_name=self.str_name,
-                        warning_status=self.responsed_at_warning_level
-                    )
-                    if self.REQUEST_ERROR_RESOLUTION_CODE:
-                        self.main_chanel.request_problem_resoluion_codes(row, is_from_ucs(message, self.employees),
-                                                                         self.str_name)
-                    to_append = f'{datetime.datetime.now().strftime("%A, %dth %B, %H:%M:%S")} issue resolved by ' \
-                                f' {is_from_ucs(message, self.employees)} in ' \
-                                f'{elapsed_time} seconds. Response time: {end_time - self.response_time}\n'
-                    with open(f'statistics/{is_from_ucs(message, self.employees).lower()}.txt', 'a') as f:
-                        f.write(to_append)
-                else:
-                    print(
-                        f"[{utils.get_time()}] [{self.str_name.upper()} TG CHANEL] "
-                        f"{is_from_ucs(message, self.employees)} "
-                        f"resolved issue")
-                    self.main_chanel.send_message(f'Issue resolved by {is_from_ucs(message, self.employees)}')
+                self.set_status_to_resolved(message)
             # """-----------------------------------------------------------------------"""
 
             # """----------------------Nothing happened---------------------------------"""

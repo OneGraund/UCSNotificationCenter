@@ -198,3 +198,6 @@ class SupportDataWKS(Worksheet):
         self.worksheet.update(f'K{row_to_upload_num}', warning_status)
 
         return row_to_upload_num
+
+if __name__ == '__main__':
+    SupportWKS(UPD_INTERVAL=2,OUTPUT_UPDATES=True).supporting_today()
