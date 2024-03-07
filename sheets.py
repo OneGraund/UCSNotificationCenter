@@ -5,6 +5,7 @@ from datetime import datetime, date
 import time
 import threading
 import holidays
+import statistics
 import utils
 
 dotenv.load_dotenv()
@@ -161,6 +162,61 @@ class SupportDataWKS(Worksheet):
     def today_results(self):
         pass
 
+    def get_object_common_issues(self, restaurant_name, start_period=None, end_period=None):
+        """
+        Calculate the common issues for a given restaurant within a specified period.
+
+        Parameters:
+        restaurant_name (str): The name of the restaurant to filter the issues.
+        start_period (list of int, optional): The start period date as a list in the form [Year, Month, Day].
+        end_period (list of int, optional): The end period date as a list in the form [Year, Month, Day].
+
+        Returns:
+        dict: A dictionary where keys are error codes and values are the counts of their occurrences.
+
+        This function iterates over all rows in the worksheet buffer and aggregates the count of each
+        problem code for the specified restaurant. If only start_period or end_period is specified,
+        it will consider issues from the start_period onwards or up to the end_period, respectively.
+        Rows with unspecified problem codes are counted under the key 'NotGiven' and will be shown last
+        in the sorted statistics.
+        """
+
+        # Initialize a dictionary to store error code occurrences.
+        error_code_counts = {}
+
+        # Convert start_period and end_period into datetime objects if they are provided
+        start_date = datetime(*start_period) if start_period else datetime.min
+        end_date = datetime(*end_period) if end_period else datetime.max
+
+        # Iterate over the rows of the worksheet.
+        for row in self.get_buff()[1:]:
+            # Check if the restaurant name matches.
+            if row[9] == restaurant_name:
+                # Extract the row's date as a datetime object for comparison.
+                row_date = datetime(int(row[1]), int(row[2]), int(row[3]))
+
+                # Check the date range condition
+                if start_date <= row_date <= end_date:
+                    # Get the problem code or mark it as 'NotGiven'.
+                    problem_code = row[7] if row[7] else 'NotGiven'
+
+                    # Increment the count for this problem code in the dictionary.
+                    error_code_counts[problem_code] = error_code_counts.get(problem_code, 0) + 1
+
+        # Ensure 'NotGiven' comes last if it's present.
+        not_given_count = error_code_counts.pop('NotGiven', None)
+        if not_given_count is not None:
+            error_code_counts['NotGiven'] = not_given_count
+
+        return error_code_counts
+
+    def fetch_available_restaurant_names(self):
+        rst_names = []
+        for row in self.get_buff()[1:]:
+            if row[9] != '' and row[9] not in rst_names:
+                rst_names.append(row[9])
+        return rst_names
+
     def update_problem_resolution_codes(self, row_to_upload, error_code, resol_code):
         print(f'[SHEETS] [{utils.get_time()}] Received error code and resolution code for row {row_to_upload},'
               f' error code - {error_code}, resol_code - {resol_code}. Uploading...')
@@ -200,4 +256,8 @@ class SupportDataWKS(Worksheet):
         return row_to_upload_num
 
 if __name__ == '__main__':
-    SupportWKS(UPD_INTERVAL=2,OUTPUT_UPDATES=True).supporting_today()
+    support_data_wks = SupportDataWKS(UPD_INTERVAL=2,OUTPUT_UPDATES=True)
+    restaurant_names = support_data_wks.fetch_available_restaurant_names()
+    print(restaurant_names)
+    for rst_name in restaurant_names:
+        print(statistics.format_statistics(support_data_wks.get_object_common_issues(restaurant_name=rst_name)))

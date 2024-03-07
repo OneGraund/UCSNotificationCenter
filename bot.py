@@ -1,5 +1,6 @@
 import datetime
 import logging
+import statistics
 import os
 import json
 import dotenv
@@ -14,13 +15,10 @@ from sip_call import call_employee_with_priority
 dotenv.load_dotenv()
 NOTIFY_DONE_INTERVAL_MIN = 1
 
-with open('error_codes.json', 'r') as error_codes_file:
-    issues_dict = json.load(error_codes_file)
-
 with open('resolution_codes.json', 'r') as resolution_codes_file:
     resol_dict = json.load(resolution_codes_file)
 
-device_types = list(issues_dict.keys())
+
 
 
 class TelegramBot:
@@ -107,6 +105,7 @@ def generate_buttons(bts_names, markup):
 
 
 def get_issues_and_codes(device, issue_type):
+    issues_dict = statistics.load_error_descriptions()
     if device in issues_dict and issue_type in issues_dict[device]:
         issues = issues_dict[device][issue_type]
         return [[issue, code] for issue, code in issues.items()]
@@ -134,7 +133,7 @@ class UCSAustriaChanel:
             self.chat_id = os.getenv('TEST_UCS_SUPPORT_CHAT_ID')
             self.INIT_DELAY = 5
         self.bot = bot
-
+        self.pause_personal_monitoring = False
         self.launch_time = time.time()
         to_send = ''
         self.sent_messages = []
@@ -149,30 +148,38 @@ class UCSAustriaChanel:
             for key, value in device_info.items():
                 to_send = to_send + f"\n{key}: {value}"
             self.send_message(to_send)
-        threading.Thread(target=self.sender).start()
+        threading.Thread(target=self.personal_chat_monitoring_thread).start()
 
     def send_message(self, message_text):
         self.bot.send_message(self.chat_id, message_text, disable_notification=1)
 
     def clear_pending_updates(self):
         print(f'[{utils.get_time()}] [MAIN BOT] [CLEARING PENDING UPDATES] Started clearing updates...')
-        updates = self.bot.get_updates()
-        if updates:
-            last_update_id = updates[-1].update_id
-            # Clear all pending updates
-            updates = self.bot.get_updates(offset=last_update_id + 1)
-            print("All pending updates have been cleared.")
-        else:
-            print("No updates to clear.")
+        try:
+            updates = self.bot.get_updates()
+            if updates:
+                last_update_id = updates[-1].update_id
+                # Clear all pending updates
+                updates = self.bot.get_updates(offset=last_update_id + 1)
+                print("All pending updates have been cleared.")
+            else:
+                print("No updates to clear.")
+        except Exception as e:
+            print(f'[{utils.get_time()}] [CLEAR PENDING UPDATES] Error: {e}')
 
     def request_problem_resoluion_codes(self, row, employee, restaurant_name):
+        print(f'[{utils.get_time()}] [{employee.upper()} PERSONAL CHAT] Starting request for error code and resolution'
+              f'code. Restaurant name - {restaurant_name}. Deactivating other commands...')
         personal_chat_id = str(os.getenv(f'{employee.upper()}_TELEGRAM_ID'))
-
+        self.pause_personal_monitoring = True
         if employee == 'Bot':
             return
 
         def request_device_type():
+            print(f'[{utils.get_time()}] [{employee.upper()} PERSONAL CHAT] Requesting now device type. Checking for '
+                  f'updates...')
             markup = types.ReplyKeyboardMarkup(row_width=2)
+            device_types = list(statistics.load_error_descriptions().keys())
             with_else = device_types + ['Else']
             markup = generate_buttons(with_else, markup)
             self.bot.send_message(personal_chat_id,
@@ -185,9 +192,11 @@ class UCSAustriaChanel:
                 for update in updates:
                     if update.message and str(update.message.chat.id) == personal_chat_id:
                         if update.message.text in device_types:
+                            print(f'[{utils.get_time()}] [{employee.upper()} PERSONAL CHAT] Given device '
+                                  f'{update.message.text} exists in the list, therefore it is successfully specified')
                             return update.message.text
                         elif update.message.text == 'Else':
-                            print(f'[{utils.get_time()}] [REQ ERR SOL] User chose device type "Else"')
+                            print(f'[{utils.get_time()}] [REQ ERR SOL] User chose device type "Else" for device type')
                             return 'Else'
                         else:
                             print(f'[{utils.get_time()}] [REQ ERR SOL] Specified device type by user is not in list'
@@ -195,19 +204,21 @@ class UCSAustriaChanel:
                             self.bot.send_message(personal_chat_id,
                                                   'Please click on one of the buttons to proceed. If you are trying '
                                                   'to specify device that was not in the list, click "Else"',
-                                                  reply_markup=markup)
+                                                  reply_markup=markup, disable_notification=1)
                             self.clear_pending_updates()
                     else:
                         print(f'[{utils.get_time()}] [REQ ERR] Either update does not contain message, or it was not '
                               f'written in correct chat.\n\tChat dump:{update.message.chat} \n\tDump: {update}')
-                time.sleep(2)
+                time.sleep(1)
 
         def request_issue_type():
+            print(f'[{utils.get_time()}] [{employee.upper()} PERSONAL CHAT] Requesting now issue type. Checking for '
+                  f'updates...')
             markup = types.ReplyKeyboardMarkup(row_width=2)
             markup = generate_buttons(['Back 🔙', 'Software', 'Hardware'], markup)
             self.bot.send_message(personal_chat_id,
                                   'Did you have a Software-related issue or Hardware-related issue?',
-                                  reply_markup=markup)
+                                  reply_markup=markup, disable_notification=1)
 
             self.clear_pending_updates()
             while True:
@@ -215,19 +226,26 @@ class UCSAustriaChanel:
                 for update in updates:
                     if update.message and str(update.message.chat.id) == personal_chat_id:
                         if update.message.text.capitalize() in ['Software', 'Hardware']:
+                            print(f'[{utils.get_time()}] [{employee.upper()} PERSONAL CHAT] Specified issue type exi'
+                                  f'sts in the list. Proceeding...')
                             return update.message.text.capitalize()
                         elif update.message.text.capitalize() == 'Back 🔙':
                             # Get back to choosing device
+                            print(f'[{utils.get_time()}] [{employee.upper()} PERSONAL CHAT] User opted to get back to '
+                                  f'previous choosing of device type. Going back...')
                             return 'Back'
                         else:
                             print(f'[{utils.get_time()}] [REQ ERR SOL] Message {update.message.text} is neither '
                                   f'Software, nor Hardware. Can not proceed..')
                             self.bot.send_message(personal_chat_id,
                                                   'Please specify either "Software" or "Hardware". If both of the issues'
-                                                  ' are related, please choose one that is closer', reply_markup=markup)
+                                                  ' are related, please choose one that is closer', reply_markup=markup,
+                                                  disable_notification=1)
                             self.clear_pending_updates()
 
         def request_error_code(device_name, issue_type):
+            print(f'[{utils.get_time()}] [{employee.upper()} PERSONAL CHAT] Requesting error code now. Checking for '
+                  f'updates...')
             issues_and_codes = get_issues_and_codes(device_name, issue_type)
             issues = []
             codes = []
@@ -237,33 +255,85 @@ class UCSAustriaChanel:
                 codes.append(code)
             del issues_and_codes
 
-            issues = ['Back 🔙'] + issues
+            issues = ['Back 🔙'] + issues + ['Else 🤷‍♂️']
             markup = types.ReplyKeyboardMarkup(row_width=2)
             markup = generate_buttons(issues, markup)
             self.bot.send_message(personal_chat_id,
                                   'Choose the type of error you had',
-                                  reply_markup=markup)
+                                  reply_markup=markup, disable_notification=1)
 
             self.clear_pending_updates()
             while True:
                 updates = self.bot.get_updates()
                 for update in updates:
                     if update.message and str(update.message.chat.id) == personal_chat_id:
-                        if update.message.text in issues[1:]:  # and update.message.text in issues:
+                        if update.message.text in issues[1:-1]:  # and update.message.text in issues:
                             err_cd = codes[issues.index(update.message.text)-1]
+                            print(f'[{utils.get_time()}] [{employee.upper()} PERSONAL CHAT] Error description specif'
+                                  f'ied by user exists in the json file. Proceeding')
                             return err_cd
                         elif update.message.text == 'Back 🔙':
+                            print(f'[{utils.get_time()}] [{employee.upper()} PERSONAL CHAT] User opted to go back to'
+                                  f' choosing issue type. Going back...')
                             # Get back to choosing issue type
                             return 'Back'
                         else:
-                            self.bot.send_message(personal_chat_id,
-                                                  'Please specify one of the given issues. If none of them are the '
-                                                  'one you would like to choose, than choose one that is closely '
-                                                  'related to it.\nPlease also contact @vova_ucs to tell them about '
-                                                  'new error type for this device', reply_markup=markup)
-                            self.clear_pending_updates()
+                            print(f'[{utils.get_time()}] [{employee.upper()} PERSONAL CHAT] User chose Else. Starting'
+                                  f' the process of adding new error code')
+                            return 'Else'
+
+        def add_error_code(device_name, issue_type):
+            buttons = ['Yes 👌', 'No, Edit 📝', 'Cancel adding ❌']
+            print(f'[{utils.get_time()}] [{employee.upper()} PERSONAL CHAT] Starting the process of adding new error '
+                  f'code. Device name: {device_name}, issue type: {issue_type}')
+
+            def confirm_edit_deny_adding_error_code(error_code_description):
+                self.clear_pending_updates()
+                while True:
+                    updates = self.bot.get_updates()
+                    for update in updates:
+                        if update.message and str(update.message.chat.id) == personal_chat_id:
+                            if update.message.text == buttons[0]: # 'Yes'
+                                print(f'[{utils.get_time()}] [{employee.upper()} PERSONAL CHAT] User is satisfied with'
+                                      f' the error description. Starting the process of adding it to the json file...')
+                                new_error_code = statistics.add_new_error_code(error_code_description, device_name,
+                                                                               issue_type)
+                                self.bot.send_message(personal_chat_id, 'Okay. Your new error has been added to json'
+                                                                        ' file and now will be assigned to <b>'
+                                                                        f'{new_error_code}</b>', parse_mode='HTML',
+                                                      disable_notification=1)
+                                return new_error_code
+                            elif update.message.text == buttons[1]: # Edit
+                                print(f'[{utils.get_time()}] [{employee.upper()} PERSONAL CHAT] User opted to change '
+                                      f'the description of error')
+                                add_error_code(device_name, issue_type)
+                            elif update.message.text == buttons[2]: # Cancel
+                                print(f'[{utils.get_time()}] [{employee.upper()} PERSONAL CHAT] User opted to cancell'
+                                      f' the whole process of adding new error')
+                                return None
+
+            self.bot.send_message(personal_chat_id, 'Please write down the error description that you want to add',
+                                  disable_notification=1, reply_markup=ReplyKeyboardRemove())
+            self.clear_pending_updates()
+            while True:
+                updates = self.bot.get_updates()
+                for update in updates:
+                    if update.message and str(update.message.chat.id) == personal_chat_id:
+                        print(f'[{utils.get_time()}] [{employee.upper()} PERSONAL CHAT] Got this error description: '
+                              f'{update.message.text}. Asking if this error description satisfies user...')
+                        markup = types.ReplyKeyboardMarkup(row_width=2)
+                        markup = generate_buttons(buttons, markup)
+
+                        self.bot.send_message(personal_chat_id, f'Would you like to add new error type named:\n'
+                                                                f'<b>{update.message.text}</b>?\nOr would you like '
+                                                                f'to edit it?', reply_markup=markup, parse_mode='HTML',
+                                              disable_notification=1)
+                        return confirm_edit_deny_adding_error_code(update.message.text)
+
 
         def request_resolution_code(device_name, issue_type):
+            print(f'[{utils.get_time()}] [{employee.upper()} PERSONAL CHAT] Requesting now resolution code. Checking '
+                  f'for updates...')
             resolutions_and_codes = get_resolutions_and_codes(device_name, issue_type)
             resolutions = []
             codes = []
@@ -275,7 +345,8 @@ class UCSAustriaChanel:
 
             markup = types.ReplyKeyboardMarkup(row_width=2)
             markup = generate_buttons(resolutions, markup)
-            self.bot.send_message(personal_chat_id, 'Now specify how did you fix this issue', reply_markup=markup)
+            self.bot.send_message(personal_chat_id, 'Now specify how did you fix this issue', reply_markup=markup,
+                                  disable_notification=1)
             self.clear_pending_updates()
             while True:
                 updates = self.bot.get_updates()
@@ -283,15 +354,22 @@ class UCSAustriaChanel:
                     if update.message and str(update.message.chat.id) == personal_chat_id:
                         if update.message.text in resolutions[1:]:
                             res_cd = codes[resolutions.index(update.message.text)-1]
+                            print(f'[{utils.get_time()}] [{employee.upper()} PERSONAL CHAT] Resolution code entered '
+                                  f'by user is in the list. Proceeding...')
                             return res_cd
                         elif update.message.text == 'Back 🔙':
+                            print(f'[{utils.get_time()}] [{employee.upper()} PERSONAL CHAT] User opted to go back to '
+                                  f'choosing error code. Going back..')
                             return 'Back'
                         else:
+                            print(f'[{utils.get_time()}] [{employee.upper()} PERSONAL CHAT] Resolution type specified '
+                                  f'by user was not found in list. Asking to retry...')
                             self.bot.send_message(personal_chat_id,
                                                   'Please specify one of the given resolutions. If none of them are the '
                                                   'one you would like to choose, than choose one that is closely '
                                                   'related to it.\nPlease also contact @vova_ucs to tell them about '
-                                                  'new error type for this device', reply_markup=markup)
+                                                  'new error type for this device', reply_markup=markup,
+                                                  disable_notification=1)
                             self.clear_pending_updates()
 
         def check_for_error(stop_event):
@@ -301,11 +379,25 @@ class UCSAustriaChanel:
             error_code = None
             resolution_code = None
 
+            create_new_error_code = False
+            create_new_resolution_code = False
+
             while not stop_event.is_set():
                 print(f'[{utils.get_time()}] [REQ ERR] while loop cycle with questioning employee with '
                       f'device name, issue type, error code and resolution code. Current given data: '
                       f'Device name - {device_name}, Issue type - {issue_type}, Error code - {error_code},'
                       f' Resolution code - {resolution_code}.')
+
+                if create_new_error_code:
+                    new_error_code = add_error_code(device_name, issue_type)
+                    create_new_error_code = False
+                    if new_error_code is not None:
+                        error_code = new_error_code
+                    else:
+                        error_code = None
+
+
+
                 if device_name is None and issue_type is None and error_code is None:
                     device_name = request_device_type()
                     if device_name == 'Else':
@@ -314,7 +406,7 @@ class UCSAustriaChanel:
                                                                 "report on error code and issue code. Just leave "
                                                                 "it like that and contact @vova_ucs to discuss "
                                                                 "adding new device type...",
-                                              reply_markup=ReplyKeyboardRemove())
+                                              reply_markup=ReplyKeyboardRemove(), disable_notification=1)
                         stop_event.set()
                         break
                     else:
@@ -323,7 +415,6 @@ class UCSAustriaChanel:
                 elif device_name and issue_type is None and error_code is None:
                     issue_type = request_issue_type()
                     if issue_type == 'Back':
-                        print('Back was chosen for issue type, going back')
                         issue_type = None
                         device_name = None
                         continue
@@ -335,6 +426,12 @@ class UCSAustriaChanel:
                         print('Back was chosen for error_code going back')
                         error_code = None
                         issue_type = None
+                        #self.clear_pending_updates()
+                        continue
+                    elif error_code == 'Else':
+                        create_new_error_code = True
+                        error_code = None
+                        print(f'[{utils.get_time()}] [REQ ERR] User wants to add new error code.')
                         continue
                     print(f'[{utils.get_time()}] [REQ ERR] Error code for {issue_type} issue with {device_name} is '
                           f'{error_code}')
@@ -353,7 +450,9 @@ class UCSAustriaChanel:
                     self.bot.send_message(personal_chat_id, 'Thank you. All needed info was received and database in '
                                                             'worksheet was updated, you can continue '
                                                             'with your work or relaxation ;)',
-                                          reply_markup=ReplyKeyboardRemove())
+                                          reply_markup=ReplyKeyboardRemove(), disable_notification=1)
+                    self.clear_pending_updates()
+                    self.pause_personal_monitoring = False
                     error_code = error_code.split(' ')[1]
                     resolution_code = resolution_code.split(' ')[1]
                     self.support_data_wks.update_problem_resolution_codes(row, error_code, resolution_code)
@@ -368,16 +467,58 @@ class UCSAustriaChanel:
         threading.Thread(target=check_for_error,
                          args=(stop_event,)).start()
 
-    def sender(self):
-        while True:
-            hh_mm_ss_formattime_now = datetime.datetime.now().strftime("%H:%M:%S") == '08:00:00'
-            if hh_mm_ss_formattime_now == '08:00:00':
-                to_p = os.getenv(self.support_wks.supporting_today().upper() + '_TELEGRAM_USERNAME')
-                self.send_message(f'SH reminder @{to_p}')
-            elif hh_mm_ss_formattime_now == '23:59:00':
-                result = self.support_data_wks.today_results()
-                self.send_message(f'Results for supporting today:')
-            time.sleep(1)
+    def personal_chat_monitoring_thread(self):
+        while True:  # Replace with a more suitable condition for your application
+            if not self.pause_personal_monitoring:
+                try:
+                    updates = self.bot.get_updates(timeout=1)  # Adjust timeout as needed
+                    # Process each update
+                    for update in updates:
+                        if update.message:  # Check if the update contains a message
+                            chat_id = update.message.chat.id
+                            text = update.message.text
+                            if text == '/my_id':
+                                self.bot.send_message(chat_id, f'{is_from_ucs(update.message)}, your Telegram ID is: '
+                                                               f'{chat_id}')
+                            elif '/stat' in text:
+                                restaurant_name = statistics.extract_restaurant_name_generic(text)
+                                available_restaurant_names = self.support_data_wks.fetch_available_restaurant_names()
+                                if restaurant_name in available_restaurant_names:
+                                    dates = statistics.parse_command_date(text)
+                                    if dates is not None:
+                                        codes = self.support_data_wks.get_object_common_issues(
+                                            restaurant_name, dates[0], dates[1])
+                                        self.bot.send_message(chat_id,
+                                                              f'<b>{restaurant_name.upper()}</b> statistics\n'
+                                                              f'Start date: {dates[0][2]}.{dates[0][1]}.{dates[0][0]}\n'
+                                                              f'End date: {dates[1][2]}.{dates[1][1]}.{dates[1][0]}\n' +
+                                                              str(statistics.format_statistics(codes)),
+                                                              parse_mode='HTML')
+                                    else:
+                                        self.bot.send_message(chat_id, 'Error❌\n Specified date is not supported. Please '
+                                                                       'use DD.MM.YYY format for entering date')
+                                elif restaurant_name == 'help':
+                                    # /stat test from April 2024 till May 2024
+                                    continue
+                                #elif restaurant_name == None:
+                                #    continue
+                                    # present statistics of all restaurants
+                                else:
+                                    to_send = (f'{restaurant_name} was not found in google worksheet. Available '
+                                               f'restaurant names are: \n')
+                                    for rst_name in available_restaurant_names:
+                                        to_send += f'*{rst_name}*\n'
+                                    self.bot.send_message(chat_id, to_send, parse_mode='Markdown')
+                    # Update the offset to confirm processing of updates
+                    if updates:
+                        last_update_id = updates[-1].update_id
+                        self.bot.get_updates(offset=last_update_id + 1, timeout=1)
+                except Exception as e:
+                    print(f"[{utils.get_time()}] Error fetching updates in personal monitoring thread: {e}")
+                    self.clear_pending_updates()
+            #else:
+            #    print("Polling paused.")
+            time.sleep(1)  # Adjust sleep time as needed to control the polling rate
 
 
 class TelegramChanel:
