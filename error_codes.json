@@ -1,1 +1,109 @@
-{"Kiosk": {"Hardware": {"Hard drive failure": "Error 0201", "Touch screen unresponsive": "Error 0202", "Printer connection failure": "Error 0203", "Scanner not detected": "Error 0204"}, "Software": {"Kiosk software is stuck at loading screen": "Error 0101", "No connection to MID server": "Error 0102", "Blue screen of death": "Error 0103", "Software not launching": "Error 0104", "Something Else": "Error 0105", "This is test error description that I am assigning": "Error 0106", "jona pops!!!": "Error 0107"}}, "Kassa": {"Software": {"Software not launching": "Error 0301", "License validation failed": "Error 0302", "Database synchronization error": "Error 0303", "Configuration file missing": "Error 0304"}, "Hardware": {"Receipt printer jam": "Error 0401", "Cash drawer stuck": "Error 0402", "Barcode scanner malfunction": "Error 0403", "Network adapter failure": "Error 0404", "Description": 405}}, "KDS": {"Software": {"Software not launching": "Error 0501", "Order sync delay": "Error 0502", "Screen calibration lost": "Error 0503", "Update installation error": "Error 0504"}, "Hardware": {"Monitor backlight failure": "Error 0601", "Touch screen calibration issue": "Error 0602", "CPU overheating": "Error 0603", "Power supply failure": "Error 0604"}}, "QMS": {"Software": {"Software not launching": "Error 0701", "Ticket printer integration error": "Error 0702", "Real-time display sync error": "Error 0703", "User interface freeze": "Error 0704"}, "Hardware": {"Ticket printer out of paper": "Error 0801", "Display connection loose": "Error 0802", "Keypad not responding": "Error 0803", "QR code scanner not working": "Error 0804"}}, "Server": {"Software": {"Server boot failure": "Error 0901", "Critical update failure": "Error 0902", "Database corruption": "Error 0903", "Security breach detected": "Error 0904"}, "Hardware": {"Server power supply malfunction": "Error 1001", "RAID array failure": "Error 1002", "Overheating due to improper ventilation": "Error 1003", "RAM failure": "Error 1004"}}}
+{
+    "Kiosk": {
+        "Software": {
+            "No connection to MID.": "Error 0100",
+            "No connection with the printer.": "Error 0101",
+            "Kiosk did not start": "Error 0102",
+            "License expired": "Error 0103",
+            "Kiosk does not respond to clicks.": "Error 0104",
+            "Order blocked.": "Error 0105",
+            "The order receipt is stuck.": "Error 0106",
+            "No product photo.": "Error 0107",
+            "Fiscal Printer Error.": "Error 0108",
+            "Hobex terminal issue": "Error 0109",
+            "Dummy Kiosk software issue 1": "Error 0110"
+        },
+        "Hardware": {
+            "Device off": "Error 0200",
+            "HDD/SSD malfunction": "Error 0201",
+            "Touch screen broken": "Error 0202",
+            "PSU failure": "Error 0203",
+            "Printer failure": "Error 0204"
+        }
+    },
+    "Kassa": {
+        "Software": {
+            "Kassa didn't start.": "Error 0300",
+            "Server Not Found.": "Error 0301",
+            "Fiscal printer error": "Error 0302",
+            "Kassa startup stuck.": "Error 0303",
+            "License expired.": "Error 0304",
+            "Windows Update.": "Error 0305",
+            "No disk space.": "Error 0306",
+            "Phones flew out": "Error 0307",
+            "Hobex terminal issue": "Error 0308"
+        },
+        "Hardware": {
+            "Device off": "Error 0400",
+            "HDD/SSD malfunction": "Error 0401",
+            "Touch screen broken": "Error 0402",
+            "PSU failure": "Error 0403"
+        }
+    },
+    "GuestScreen": {
+        "Software": {
+            "2 GS started.": "Error 0500",
+            "GS on the wrong screen": "Error 0501",
+            "GS did not start": "Error 0502",
+            "Promo has not been updated": "Error 0503"
+        },
+        "Hardware": {
+            "Power supply failure": "Error 0600",
+            "Faulty video connection": "Error 0601"
+        }
+    },
+    "KDS": {
+        "Software": {
+            "Lost connection with KDS server": "Error 0700",
+            "KDS did not start": "Error 0701",
+            "Deauthorized by KDS": "Error 0702",
+            "The order for KDS is not deleted": "Error 0703",
+            "The order for KDS does not arrive": "Error 0704",
+            "BSDOS": "Error 0705"
+        },
+        "Hardware": {
+            "Device off": "Error 0800",
+            "HDD/SSD malfunction": "Error 0801",
+            "Touch screen broken": "Error 0802",
+            "PSU failure": "Error 0803"
+        }
+    },
+    "QMS": {
+        "Software": {
+            "The QMS tv server did not start": "Error 0900",
+            "Windows panel QMS": "Error 0901",
+            "QMS error (Windows)": "Error 0902"
+        },
+        "Hardware": {
+            "Issue with video signal": "Error 1000",
+            "Device off": "Error 1001",
+            "PSU failure": "Error 1002"
+        }
+    },
+    "SERVER": {
+        "Software": {
+            "RK7SRV not started": "Error 1100",
+            "TS SRV not launched": "Error 1101",
+            "SH wrong data": "Error 1102",
+            "FS data not loaded": "Error 1103",
+            "Changing the toilet code.": "Error 1104"
+        },
+        "Hardware": {
+            "Device off": "Error 1200",
+            "HDD/SSD malfunction": "Error 1201",
+            "Input dvc broken (Touch, keyboard,...)": "Error 1202",
+            "PSU failure": "Error 1203"
+        }
+    },
+    "Phones": {
+        "Software": {
+            "Phones don't connect": "Error 1300"
+        },
+        "Hardware": {
+            "Device off": "Error 1400",
+            "HDD/SSD malfunction": "Error 1401",
+            "Input dvc broken (Touch, keyboard,...)": "Error 1402",
+            "PSU failure": "Error 1403"
+        }
+    }
+}

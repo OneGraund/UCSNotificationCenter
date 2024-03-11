@@ -1,72 +1,94 @@
 {
     "Kiosk": {
         "Software": {
-            "Restart the application": "Resol 101",
-            "Check network settings and reconnect": "Resol 102",
-            "Perform a system update": "Resol 103",
-            "Reinstall the kiosk software": "Resol 104"
+            "Restart Mid server": "Error 0100",
+            "Restart Printer application": "Error 0101",
+            "Restart Kiosk application": "Error 0102",
+            "Renew license": "Error 0103",
+            "Restart Kiosk": "Error 0104",
+            "Delete Order": "Error 0105",
+            "Delete receipt": "Error 0106",
+            "Write Martin": "Error 0107",
+            "Restart printer and check application": "Error 0108",
+            "Restart Hobex terminal app": "Error 0109",
+            "Dummy Kiosk sfotware resolution method": "Resol 0110"
         },
         "Hardware": {
-            "Replace the hard drive": "Resol 201",
-            "Calibrate the touch screen": "Resol 202",
-            "Check printer cables and reconnect": "Resol 203",
-            "Ensure scanner is properly connected": "Resol 204"
+            "Hard reset": "Resol 0200"
         }
     },
     "Kassa": {
         "Software": {
-            "Ensure software is up to date": "Resol 105",
-            "Verify license key and reactivate": "Resol 106",
-            "Reset database connection": "Resol 107",
-            "Restore configuration from backup": "Resol 108"
+            "Start Kassa": "Error 0300",
+            "Start Server": "Error 0301",
+            "Restart printer and check application": "Error 0302",
+            "Restart Kassa": "Error 0303",
+            "Renew license": "Error 0304",
+            "Start full Kassa": "Error 0305",
+            "Clear Skymonitor": "Error 0306",
+            "Restart phones": "Error 0307",
+            "Restart Hobex terminal app": "Error 0308"
         },
         "Hardware": {
-            "Clear printer jam and test printing": "Resol 205",
-            "Lubricate cash drawer mechanism": "Resol 206",
-            "Reset barcode scanner settings": "Resol 207",
-            "Replace or reset network adapter": "Resol 208"
+            "Hard reset": "Resol 0400"
+        }
+    },
+    "GuestScreen": {
+        "Software": {
+            "Close second GS": "Error 0500",
+            "Select GS monitor": "Error 0501",
+            "Start GS": "Error 0502",
+            "Update promo": "Error 0503"
+        },
+        "Hardware": {
+            "Hard reset": "Resol 0600"
         }
     },
     "KDS": {
         "Software": {
-            "Restart KDS software": "Resol 109",
-            "Check for order system integration issues": "Resol 110",
-            "Perform screen calibration": "Resol 111",
-            "Manually install software updates": "Resol 112"
+            "Start KDS Server": "Error 0700",
+            "Start KDS": "Error 0701",
+            "Authorise KDS": "Error 0702",
+            "Restart KDS": "Error 0703",
+            "Restart KDS Server": "Error 0704"
         },
         "Hardware": {
-            "Check and replace monitor if necessary": "Resol 209",
-            "Re-calibrate the touch interface": "Resol 210",
-            "Check cooling system and clean fans": "Resol 211",
-            "Test and replace power supply if faulty": "Resol 212"
+            "Resolution method 1": "Resol 0800",
+            "Resolution method 2": "Resol 0801",
+            "Resolution method 3": "Resol 0802",
+            "Resolution method 4": "Resol 0803"
         }
     },
     "QMS": {
         "Software": {
-            "Restart QMS application": "Resol 113",
-            "Ensure printer is correctly integrated": "Resol 114",
-            "Synchronize displays manually": "Resol 115",
-            "Restart user interface application": "Resol 116"
+            "Start QMS Server": "Error 0900",
+            "Open QMS Window": "Error 0901",
+            "Start QMS Cient": "Error 0902"
         },
         "Hardware": {
-            "Refill printer paper and test printing": "Resol 213",
-            "Check and secure all display connections": "Resol 214",
-            "Replace or repair keypad": "Resol 215",
-            "Test and recalibrate QR code scanner": "Resol 216"
+            "Hard reset": "Resol 1000"
         }
     },
-    "Server": {
+    "SERVER": {
         "Software": {
-            "Check server startup sequence and fix boot issues": "Resol 117",
-            "Apply critical updates manually": "Resol 118",
-            "Restore database from the latest backup": "Resol 119",
-            "Run a security audit and apply fixes": "Resol 120"
+            "Turn on Server": "Error 1100",
+            "Start local server": "Error 1101",
+            "SH renew requests": "Error 1102",
+            "Restart FeatureSRV": "Error 1103",
+            "Change pswd in ATsrv (Manager)": "Error 1104",
+            "Change pswd in SKsrv (Manager)": "Error 1105"
         },
         "Hardware": {
-            "Check and replace power supply unit": "Resol 217",
-            "Rebuild RAID array and restore data": "Resol 218",
-            "Improve server room ventilation": "Resol 219",
-            "Test RAM sticks and replace faulty ones": "Resol 220"
+            "Hard reset": "Resol 1200",
+            "Change CPU": "Resol 1201"
+        }
+    },
+    "Phones": {
+        "Software": {
+            "Start TMS": "Error 1300"
+        },
+        "Hardware": {
+            "Hard reset": "Resol 1400"
         }
     }
 }

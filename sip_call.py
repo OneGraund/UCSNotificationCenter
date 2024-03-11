@@ -33,10 +33,14 @@ def call_employee_with_priority(employees, priority, chanel_name=None):
     with open('call_request.txt', 'w') as call_request:
         print(f'{employee.upper()}_{cellphone.upper()}CELLPHONE_NUMBER')
         number = os.getenv(f'{employee.upper()}_{cellphone.upper()}CELLPHONE_NUMBER')
-        print(f'[{utils.get_date_and_time()}] Sending request to call {number}')
-        call_request.writelines(
-            [number]
-        )
+        if number == '' or number is None:
+            print(f'[{utils.get_date_and_time()}] [CALL REQUEST] phone number of employee is not specified in .env')
+        else:
+            print(f'[{utils.get_date_and_time()}] Sending request to call {number}')
+            call_request.writelines(
+                [number]
+            )
+
 
 
 def start_telephony_server(HOST=('192.168.192.114', 10000)):

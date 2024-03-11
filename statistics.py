@@ -110,10 +110,23 @@ def update_error_json(updated_errors: dict) -> bool:
     """
     try:
         with open('error_codes.json', 'w') as file:
-            file.write(json.dumps(updated_errors))
+            json.dump(updated_errors, file, indent=4)
         return True
     except Exception as e:
         print(f'[{utils.get_time()}] [STATISTICS] Failed updating error_codes.json. Reason:\n\t{e}')
+        return False
+
+def update_resol_json(updated_resols: dict) -> bool:
+    """
+    :param updated_resols: A dictionary that contains as well as all previous resolutions, as well as a new one
+    :return: Return True if succesfully updated, False if an error occurred
+    """
+    try:
+        with open('resolution_codes.json', 'w') as file:
+            json.dump(updated_resols, file, indent=4)
+        return True
+    except Exception as e:
+        print(f'[{utils.get_time()}] [STATISTICS] Failed updating resolution_codes.json. Reason:\n\t{e}')
         return False
 
 def add_new_error_code(error_desc: str, device_name: str, issue_type: str):
@@ -140,11 +153,134 @@ def add_new_error_code(error_desc: str, device_name: str, issue_type: str):
         print(f"[{utils.get_time()}] [STATISTICS] Failed adding new error_code to json file. Exiting add_new_error_code")
         return None
 
+def add_new_resol_code(resol_desc: str, device_name: str, issue_type: str):
+    # Input: resol description that needs to be added, device_name and issue_type to categorise correctly
+    # Return: resol code that this error was assigned to
+    new_resol_code = 0
+    resolution_descriptions = load_resolutions_descriptions()
+
+    max_error = int(list(resolution_descriptions[device_name][issue_type].values())[0][6:])
+    for value in list(resolution_descriptions[device_name][issue_type].values()):
+        print(f'Value: {value}. Type: {type(value)}')
+        if int(value[6:]) > max_error:
+            max_error = int(value[6:])
+    category = str(list(resolution_descriptions[device_name][issue_type].values())[0].split(' ')[1][:2])
+
+    new_resol_code = 'Resol ' + category + str(max_error + 1)[-2:]
+
+    resolution_descriptions[device_name][issue_type][resol_desc] = new_resol_code
+    if update_resol_json(resolution_descriptions):
+        print(f'[{utils.get_time()}] [STATISTICS] Successfully added new resol code for Category: {device_name} '
+              f'{issue_type}. Description: {resol_desc}. New resol_code: {new_resol_code}')
+        return new_resol_code
+    else:
+        print(f"[{utils.get_time()}] [STATISTICS] Failed adding new resol_code to json file. Exiting add_new_resol_code")
+        return None
+
+def return_device_names():
+    error_codes = load_error_descriptions()
+    resolution_codes = load_resolutions_descriptions()
+    dvcs_errors = list(error_codes.keys())
+    dvcs_resols = list(resolution_codes.keys())
+    if dvcs_errors == dvcs_resols:
+        return dvcs_errors
+    else:
+        print(f'[{utils.get_time()}] [RETURN DEVICE NAMES] Devices in error_codes.json and in resolution_codes.json'
+              f' dont match...')
+        return None
+
+def map_errors_and_resolutions_to_codes():
+    error_codes = load_error_descriptions()
+    device_names = return_device_names()
+    if not device_names:
+        return None
+    first_two_nums = '00'
+    for device_id, device in enumerate(device_names):
+        first_two_nums = int(first_two_nums)
+        first_two_nums += 1
+        if first_two_nums < 10:
+            first_two_nums = f'0{first_two_nums}'
+        else:
+            first_two_nums = str(first_two_nums)
+        hardware_error_list = list(error_codes[device]['Hardware'])
+        software_error_list = list(error_codes[device]['Software'])
+
+        for sw_err_id, sw_err in enumerate(software_error_list):
+            second_two_nums = None
+            if sw_err_id < 10:
+                second_two_nums = f'0{sw_err_id}'
+            else:
+                second_two_nums = str(sw_err_id)
+            error_codes[device]['Software'][sw_err] = \
+                f'Error {first_two_nums}{second_two_nums}'
+            print(f'Assigning: Error {first_two_nums}{second_two_nums},'
+                  f'to {device} software {sw_err}')
+
+        first_two_nums = int(first_two_nums)
+        first_two_nums += 1
+        if first_two_nums < 10:
+            first_two_nums = f'0{first_two_nums}'
+        else:
+            first_two_nums = str(first_two_nums)
+
+        for hd_err_id, hd_err in enumerate(hardware_error_list):
+            second_two_nums = None
+            if hd_err_id < 10:
+                second_two_nums = f'0{hd_err_id}'
+            else:
+                second_two_nums = str(hd_err_id)
+            print(f'Assigning: Error {first_two_nums}{second_two_nums},'
+                  f'to {device} hardware {hd_err}')
+            error_codes[device]['Hardware'][hd_err] = \
+                f'Error {first_two_nums}{second_two_nums}'
+
+    resolution_codes = load_resolutions_descriptions()
+    first_two_nums = '00'
+    for device_id, device in enumerate(device_names):
+        first_two_nums = int(first_two_nums)
+        first_two_nums += 1
+        if first_two_nums < 10:
+            first_two_nums = f'0{first_two_nums}'
+        else:
+            first_two_nums = str(first_two_nums)
+        hardware_error_list = list(resolution_codes[device]['Hardware'])
+        software_error_list = list(resolution_codes[device]['Software'])
+
+        for sw_err_id, sw_err in enumerate(software_error_list):
+            second_two_nums = None
+            if sw_err_id < 10:
+                second_two_nums = f'0{sw_err_id}'
+            else:
+                second_two_nums = str(sw_err_id)
+            resolution_codes[device]['Software'][sw_err] = \
+                f'Error {first_two_nums}{second_two_nums}'
+            print(f'Assigning: Resol {first_two_nums}{second_two_nums},'
+                  f'to {device} software {sw_err}')
+
+        first_two_nums = int(first_two_nums)
+        first_two_nums += 1
+        if first_two_nums < 10:
+            first_two_nums = f'0{first_two_nums}'
+        else:
+            first_two_nums = str(first_two_nums)
+
+        for hd_err_id, hd_err in enumerate(hardware_error_list):
+            second_two_nums = None
+            if hd_err_id < 10:
+                second_two_nums = f'0{hd_err_id}'
+            else:
+                second_two_nums = str(hd_err_id)
+            print(f'Assigning: Resol {first_two_nums}{second_two_nums},'
+                  f'to {device} hardware {hd_err}')
+            resolution_codes[device]['Hardware'][hd_err] = \
+                f'Resol {first_two_nums}{second_two_nums}'
+    update_error_json(error_codes)
+    update_resol_json(resolution_codes)
+
+
 if __name__ == '__main__':
     # print(add_new_error_code('Some stuff happened3', 'Kiosk', 'Hardware'))
-    print(format_statistics({
-        'Error 0101': 12,
-        'Error 0102': 2,
-        'Error 0201': 20,
-        'NotGiven': 100
-    }))
+    # print(map_errors_to_error_codes())
+    # print(map_errors_and_resolutions_to_codes())
+    # print(add_new_resol_code('Some stuff happened', 'Kiosk', 'Hardware'))
+    pass

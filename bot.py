@@ -1,5 +1,4 @@
 import datetime
-import logging
 import statistics
 import os
 import json
@@ -341,7 +340,7 @@ class UCSAustriaChanel:
                 resolutions.append(resolution)
                 codes.append(code)
             del resolutions_and_codes
-            resolutions = ['Back 🔙'] + resolutions
+            resolutions = ['Back 🔙'] + resolutions + ['Else 🤷‍♂️']
 
             markup = types.ReplyKeyboardMarkup(row_width=2)
             markup = generate_buttons(resolutions, markup)
@@ -352,7 +351,7 @@ class UCSAustriaChanel:
                 updates = self.bot.get_updates()
                 for update in updates:
                     if update.message and str(update.message.chat.id) == personal_chat_id:
-                        if update.message.text in resolutions[1:]:
+                        if update.message.text in resolutions[1:-1]:
                             res_cd = codes[resolutions.index(update.message.text)-1]
                             print(f'[{utils.get_time()}] [{employee.upper()} PERSONAL CHAT] Resolution code entered '
                                   f'by user is in the list. Proceeding...')
@@ -363,14 +362,56 @@ class UCSAustriaChanel:
                             return 'Back'
                         else:
                             print(f'[{utils.get_time()}] [{employee.upper()} PERSONAL CHAT] Resolution type specified '
-                                  f'by user was not found in list. Asking to retry...')
-                            self.bot.send_message(personal_chat_id,
-                                                  'Please specify one of the given resolutions. If none of them are the '
-                                                  'one you would like to choose, than choose one that is closely '
-                                                  'related to it.\nPlease also contact @vova_ucs to tell them about '
-                                                  'new error type for this device', reply_markup=markup,
-                                                  disable_notification=1)
-                            self.clear_pending_updates()
+                                  f'by user was not found in list. Starting adding new resolution type...')
+                            return 'Else'
+
+        def add_resol_code(device_name: str, issue_type: str):
+            buttons = ['Yes 👌', 'No, Edit 📝', 'Cancel adding ❌']
+            print(f'[{utils.get_time()}] [{employee.upper()} PERSONAL CHAT] Starting the process of adding new resol '
+                  f'code. Device name: {device_name}, issue type: {issue_type}')
+
+            def confirm_edit_deny_adding_resol_code(resol_code_description):
+                self.clear_pending_updates()
+                while True:
+                    updates = self.bot.get_updates()
+                    for update in updates:
+                        if update.message and str(update.message.chat.id) == personal_chat_id:
+                            if update.message.text == buttons[0]:  # 'Yes'
+                                print(f'[{utils.get_time()}] [{employee.upper()} PERSONAL CHAT] User is satisfied with'
+                                      f' the resol description. Starting the process of adding it to the json file...')
+                                new_resol_code = statistics.add_new_resol_code(resol_code_description, device_name,
+                                                                               issue_type)
+                                self.bot.send_message(personal_chat_id, 'Okay. Your new resolution has been added to json'
+                                                                        ' file and now will be assigned to <b>'
+                                                                        f'{new_resol_code}</b>', parse_mode='HTML',
+                                                      disable_notification=1)
+                                return new_resol_code
+                            elif update.message.text == buttons[1]:  # Edit
+                                print(f'[{utils.get_time()}] [{employee.upper()} PERSONAL CHAT] User opted to change '
+                                      f'the description of resol')
+                                add_resol_code(device_name, issue_type)
+                            elif update.message.text == buttons[2]:  # Cancel
+                                print(f'[{utils.get_time()}] [{employee.upper()} PERSONAL CHAT] User opted to cancell'
+                                      f' the whole process of adding new resol')
+                                return None
+
+            self.bot.send_message(personal_chat_id, 'Please write down the resolution description that you want to add',
+                                  disable_notification=1, reply_markup=ReplyKeyboardRemove())
+            self.clear_pending_updates()
+            while True:
+                updates = self.bot.get_updates()
+                for update in updates:
+                    if update.message and str(update.message.chat.id) == personal_chat_id:
+                        print(f'[{utils.get_time()}] [{employee.upper()} PERSONAL CHAT] Got this resol description: '
+                              f'{update.message.text}. Asking if this resol description satisfies user...')
+                        markup = types.ReplyKeyboardMarkup(row_width=2)
+                        markup = generate_buttons(buttons, markup)
+
+                        self.bot.send_message(personal_chat_id, f'Would you like to add new resol type named:\n'
+                                                                f'<b>{update.message.text}</b>?\nOr would you like '
+                                                                f'to edit it?', reply_markup=markup, parse_mode='HTML',
+                                              disable_notification=1)
+                        return confirm_edit_deny_adding_resol_code(update.message.text)
 
         def check_for_error(stop_event):
             print(f'[{utils.get_time()}] [REQ ERR] Function for asking employee for error type has started...')
@@ -395,10 +436,17 @@ class UCSAustriaChanel:
                         error_code = new_error_code
                     else:
                         error_code = None
+                if create_new_resolution_code:
+                    new_resol_code = add_resol_code(device_name, issue_type)
+                    create_new_resolution_code = False
+                    if new_resol_code is not None:
+                        resolution_code = new_resol_code
+                    else:
+                        resolution_code = None
 
 
 
-                if device_name is None and issue_type is None and error_code is None:
+                if device_name is None and issue_type is None and error_code is None and resolution_code is None:
                     device_name = request_device_type()
                     if device_name == 'Else':
                         self.bot.send_message(personal_chat_id, "If not any of the specified devices didn't "
@@ -412,7 +460,7 @@ class UCSAustriaChanel:
                     else:
                         print(f'[{utils.get_date_and_time()}] [REQ ERR] Device type in {restaurant_name} - {device_name}')
 
-                elif device_name and issue_type is None and error_code is None:
+                elif device_name and issue_type is None and error_code is None and resolution_code is None:
                     issue_type = request_issue_type()
                     if issue_type == 'Back':
                         issue_type = None
@@ -420,7 +468,7 @@ class UCSAustriaChanel:
                         continue
                     print(f'[{utils.get_time()}] [REQ ERR] Issue type with device {device_name} - {issue_type}')
 
-                elif device_name and issue_type and error_code is None:
+                elif device_name and issue_type and error_code is None and resolution_code is None:
                     error_code = request_error_code(device_name, issue_type)
                     if error_code == 'Back':
                         print('Back was chosen for error_code going back')
@@ -436,13 +484,20 @@ class UCSAustriaChanel:
                     print(f'[{utils.get_time()}] [REQ ERR] Error code for {issue_type} issue with {device_name} is '
                           f'{error_code}')
 
-                else:  # device_name, issue_type, error_code are not None
+                elif device_name and issue_type and error_code and resolution_code is None :
                     resolution_code = request_resolution_code(device_name, issue_type)
                     if resolution_code == 'Back':
                         print('Back was chosen for resolution_code, going back')
                         resolution_code = None
                         error_code = None
                         continue
+                    elif resolution_code == 'Else':
+                        create_new_resolution_code = True
+                        resolution_code = None
+                        print(f'[{utils.get_time()}] [REQ ERR] User wants to add new resolution code.')
+                        continue
+
+                elif device_name and issue_type and error_code and resolution_code:
                     stop_event.set()
                     self.send_message(f'Got update on issue in {restaurant_name} that was fixed by {employee}.'
                                       f'\nError code - {error_code}, resolution code - {resolution_code}. Issue is '
@@ -456,6 +511,11 @@ class UCSAustriaChanel:
                     error_code = error_code.split(' ')[1]
                     resolution_code = resolution_code.split(' ')[1]
                     self.support_data_wks.update_problem_resolution_codes(row, error_code, resolution_code)
+
+                else:
+                    print(f'[{utils.get_time()}] [ERROR REQUEST ERROR RESOL] Unknown unmatched state has occured!'
+                          f'Stoping thread and exiting...')
+                    stop_event.set()
 
 
         if (time.time() - self.launch_time) <= self.INIT_DELAY:
