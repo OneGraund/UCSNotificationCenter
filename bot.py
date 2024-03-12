@@ -147,6 +147,7 @@ class UCSAustriaChanel:
             for key, value in device_info.items():
                 to_send = to_send + f"\n{key}: {value}"
             self.send_message(to_send)
+        self.clear_pending_updates()
         threading.Thread(target=self.personal_chat_monitoring_thread).start()
 
     def send_message(self, message_text):
