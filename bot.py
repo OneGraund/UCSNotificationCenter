@@ -540,6 +540,15 @@ class UCSAustriaChanel:
                             if text == '/my_id':
                                 self.bot.send_message(chat_id, f'{is_from_ucs(update.message)}, your Telegram ID is: '
                                                                f'{chat_id}')
+                            elif '/killyourself' in text and is_from_ucs(update.message):
+                                print(f'[{utils.get_time()}] [KILLYOURSELF COMMAND RECEIVED] Running os._exit(0)')
+                                self.send_message('KILLYOURSELF received, STOPING Bot!')
+                                try:
+                                    os._exit(0)
+                                except Exception as e:
+                                    print(f'[{utils.get_time()}] [KILLYOURSELF ERROR] Failed running os._exit(0),'
+                                          f' info: {e}')
+
                             elif '/stat' in text:
                                 restaurant_name = statistics.extract_restaurant_name_generic(text)
                                 available_restaurant_names = self.support_data_wks.fetch_available_restaurant_names()
@@ -604,6 +613,10 @@ class TelegramChanel:
                  ):
         self.START_MUTED = START_MUTED
         self.TEST = TEST
+        if TEST:
+            self.NOTIFY_DONE_INTERVAL_MIN = 1
+        else:
+            self.NOTIFY_DONE_INTERVAL_MIN = 30
         self.REQUEST_ERROR_RESOLUTION_CODE = REQUEST_ERROR_RESOLUTION_CODE
         self.INIT_DELAY = INIT_DELAY
         if TEST and self.INIT_DELAY != 0:
@@ -656,7 +669,7 @@ class TelegramChanel:
                 hours, rem = divmod(elapsed_time, 3600)
                 minutes, seconds = divmod(rem, 60)
                 # print(f'Elapsed: {hours} hours {minutes} minutes {seconds} seconds after last message')
-                if self.status == 'unresolved' and self.warning == 'no warning' and minutes >= NOTIFY_DONE_INTERVAL_MIN\
+                if self.status == 'unresolved' and self.warning == 'no warning' and minutes >= self.NOTIFY_DONE_INTERVAL_MIN\
                         and hours < 474761:   # I mean this is because strangely it tries to substract, soooo
                     if self.done_reminders_sent >= 3:
                         self.send_message('Closing issue automatically after 3 requests to close it manually')
