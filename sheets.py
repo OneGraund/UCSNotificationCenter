@@ -21,7 +21,7 @@ def is_holiday():
 
 
 def write_lists_to_file(lists, filename):
-    with open(filename, 'w') as f:
+    with open(filename, 'w', encoding='utf-8') as f:
         for lst in lists:
             for item in lst:
                 f.write(f'{item}\n')
@@ -29,7 +29,7 @@ def write_lists_to_file(lists, filename):
 
 
 def read_lists_from_file(filename):
-    with open(filename, 'r') as f:
+    with open(filename, 'r', encoding='utf-8') as f:
         lists = []
         current_list = []
         for line in f:
@@ -98,7 +98,7 @@ class Worksheet(Spreadsheet):
         print(f'[{self.worksheet_name.upper()} BUFFER UPDATER] Buffer updater is started and regularly updates .txt ✅')
         while True:
             time.sleep(60 * self.UPD_INTERVAL)
-            for i in range(0,5):
+            for i in range(0, 5):
                 try:
                     write_lists_to_file(self.worksheet.get_all_values(), f'{self.worksheet_name}_buff.txt')
                     connection_error = None
@@ -222,6 +222,45 @@ class SupportDataWKS(Worksheet):
               f' error code - {error_code}, resol_code - {resol_code}. Uploading...')
         self.worksheet.update(f'H{row_to_upload}', error_code)
         self.worksheet.update(f'I{row_to_upload}', resol_code)
+        self.worksheet.update(f'L{row_to_upload}', statistics.get_erorr_description_from_code(error_code))
+        self.worksheet.update(f'M{row_to_upload}', statistics.get_resolution_descrioption_from_code(resol_code))
+        self.worksheet.update(f'N{row_to_upload}', statistics.get_device_name_from_code(error_code))
+        self.worksheet.update(f'O{row_to_upload}', statistics.get_issue_type_from_code(error_code))
+
+    def update_error_resol_descriptions(self):
+        # fetch not updated rows
+        print(f'[SUPPORTDATA WORKSHEET] Updating SupportData with error descriptions'
+              f'and resolution descriptions that have not been yet entered')
+        time.sleep(3)
+        for row_num, row in enumerate(self.get_buff()[1:]):
+            if row[7] != '' and row[8] != '' and row[11] == '' and row[12] == '' and row[0] != '' and row[9] != 'test':
+                row[11] = statistics.get_erorr_description_from_code(row[7])
+                row[12] = statistics.get_resolution_descrioption_from_code(row[8])
+                print(f'[SUPPORTDATA WORKSHEET] Updating row {row_num+2} with '
+                     f'error description and resolution description. \n\tCodes are:'
+                     f'{row[7]} {row[8]}\n\tdescriptions: \n\t\t{row[11]}\n\t\t'
+                     f'{row[12]}')
+                self.worksheet.update(f'L{row_num+2}', row[11])
+                self.worksheet.update(f'M{row_num+2}', row[12])
+                time.sleep(5)
+                #print(row)
+
+    def update_device_name_issue_type(self):
+        print(f'[SUPPORTDATA WORKSHEET] Updating SupportData with device names and issue types of issues')
+        time.sleep(3)
+        for row_num, row in enumerate(self.get_buff()[1:]):
+            if row[0] != '' and row[7] != '' and row[8] != '' and row[13] == '' and row[14] == '' and row[9] != 'test':
+                # row[13] is device name, row[14] is issue type
+                row[13] = statistics.get_device_name_from_code(row[7])
+                row[14] = statistics.get_issue_type_from_code(row[7])
+                print(f'[SUPPORTDATA WORKSHEET] Updating row {row_num + 2} with device names and issue types'
+                      f'\n\tCode: {row[7]}, \n\tIssue description: {row[11]},\n\tDevice name: {row[13]}\n\t'
+                      f'Issue type: {row[14]}')
+                self.worksheet.update(f'N{row_num + 2}', row[13])
+                self.worksheet.update(f'O{row_num + 2}', row[14])
+                time.sleep(5)
+                #print(row)
+
 
     def upload_issue_data(self, response_time, resolution_time, person_name, restaurant_name, warning_status,
                           problem_code=None, resolution_code=None):
@@ -239,8 +278,8 @@ class SupportDataWKS(Worksheet):
             if row[0] == '':
                 row_to_upload_num = row_id
                 break
-        print(f'[{utils.get_date_and_time()}] [SUPPORT DATA WKS] Uploading data to row {row_to_upload_num+1}')
-        row_to_upload_num=row_to_upload_num+1
+        print(f'[{utils.get_date_and_time()}] [SUPPORT DATA WKS] Uploading data to row {row_to_upload_num + 1}')
+        row_to_upload_num = row_to_upload_num + 1
         self.worksheet.update(f'A{row_to_upload_num}', person_name)
         self.worksheet.update(f'B{row_to_upload_num}', current_year)
         self.worksheet.update(f'C{row_to_upload_num}', current_month)
@@ -255,9 +294,7 @@ class SupportDataWKS(Worksheet):
 
         return row_to_upload_num
 
+
 if __name__ == '__main__':
-    support_data_wks = SupportDataWKS(UPD_INTERVAL=2,OUTPUT_UPDATES=True)
-    restaurant_names = support_data_wks.fetch_available_restaurant_names()
-    print(restaurant_names)
-    for rst_name in restaurant_names:
-        print(statistics.format_statistics(support_data_wks.get_object_common_issues(restaurant_name=rst_name)))
+    support_data_wks = SupportDataWKS(UPD_INTERVAL=2, OUTPUT_UPDATES=True)
+    print(support_data_wks.get_object_common_issues('kfc par'))

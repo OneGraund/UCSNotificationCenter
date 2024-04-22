@@ -453,6 +453,7 @@ class UCSAustriaChanel:
                         self.bot.send_message(personal_chat_id, "Resolved issue will not be marked with an error"
                                               " and a resolution code, however it will still appear in SupportData",
                                               reply_markup=ReplyKeyboardRemove(), disable_notification=1)
+                        self.send_message(f'Issue in {restaurant_name} was not an Issue')
                         stop_event.set()
                         break
                     else:
@@ -670,7 +671,7 @@ class TelegramChanel:
                 if self.status == 'unresolved' and self.warning == 'no warning' and minutes >= self.NOTIFY_DONE_INTERVAL_MIN\
                         and hours < 474761:   # I mean this is because strangely it tries to substract, soooo
                     if self.done_reminders_sent >= 3:
-                        self.send_message('Closing issue automatically after 3 requests to close it manually')
+                        #self.send_message('Closing issue automatically after 3 requests to close it manually')
                         print(f'[{utils.get_time()}] [{self.str_name.upper()} TG CH] Setting status to resolved after '
                               f'3 notifications to {self.who_answered_to_report} to close an issue')
                         self.set_status_to_resolved()

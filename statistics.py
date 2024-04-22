@@ -5,6 +5,23 @@ import re
 import utils
 
 
+def get_description(code, descriptions):
+    # print(f'[get description] code - {code}, descriptions - {descriptions}')
+    for system, categories in descriptions.items():
+        for category, errors in categories.items():
+            for description, error_code in errors.items():
+                if str(error_code).endswith(code):  # Assuming error codes are unique.
+                    return description
+    return "Description not found"
+
+def get_dvc_name_iss_type(code, descriptions):
+    for system, categories in descriptions.items():
+        for category, errors in categories.items():
+            for description, error_code in errors.items():
+                if str(error_code).endswith(code):  # Assuming error codes are unique.
+                    return system, category
+    return "Device not found", "Issue type unknown"
+
 def format_statistics(error_code_counts: dict) -> str:
     """
     Create a Markdown formatted string of statistics from the error code counts dictionary,
@@ -20,14 +37,7 @@ def format_statistics(error_code_counts: dict) -> str:
     error_descriptions = load_error_descriptions()
 
     # Helper function to get the description for an error code.
-    def get_description(code, descriptions):
-        # print(f'[get description] code - {code}, descriptions - {descriptions}')
-        for system, categories in descriptions.items():
-            for category, errors in categories.items():
-                for description, error_code in errors.items():
-                    if str(error_code).endswith(code):  # Assuming error codes are unique.
-                        return description
-        return "Description not found"
+
 
     # Sort the error codes by occurrence count, ensuring 'NotGiven' is last.
     sorted_error_codes = sorted(
@@ -277,6 +287,17 @@ def map_errors_and_resolutions_to_codes():
     update_error_json(error_codes)
     update_resol_json(resolution_codes)
 
+def get_erorr_description_from_code(code):
+    return get_description(code, load_error_descriptions())
+
+def get_resolution_descrioption_from_code(code):
+    return get_description(code, load_resolutions_descriptions())
+
+def get_device_name_from_code(code):
+    return get_dvc_name_iss_type(code, load_error_descriptions())[0]
+
+def get_issue_type_from_code(code):
+    return get_dvc_name_iss_type(code, load_error_descriptions())[1]
 
 if __name__ == '__main__':
     # print(add_new_error_code('Some stuff happened3', 'Kiosk', 'Hardware'))
