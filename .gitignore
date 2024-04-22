@@ -6,3 +6,5 @@ __pycache__/
 statistics/
 test.py
 call_request.txt
+error_codes.json
+resolution_codes.json

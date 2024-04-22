@@ -180,7 +180,7 @@ class UCSAustriaChanel:
                   f'updates...')
             markup = types.ReplyKeyboardMarkup(row_width=2)
             device_types = list(statistics.load_error_descriptions().keys())
-            with_else = device_types + ['Else']
+            with_else = device_types + ['Not an issue']
             markup = generate_buttons(with_else, markup)
             self.bot.send_message(personal_chat_id,
                                   f"Choose device type which you fixed in {restaurant_name}",
@@ -195,7 +195,7 @@ class UCSAustriaChanel:
                             print(f'[{utils.get_time()}] [{employee.upper()} PERSONAL CHAT] Given device '
                                   f'{update.message.text} exists in the list, therefore it is successfully specified')
                             return update.message.text
-                        elif update.message.text == 'Else':
+                        elif update.message.text == 'Not an issue':
                             print(f'[{utils.get_time()}] [REQ ERR SOL] User chose device type "Else" for device type')
                             return 'Else'
                         else:
@@ -450,11 +450,8 @@ class UCSAustriaChanel:
                 if device_name is None and issue_type is None and error_code is None and resolution_code is None:
                     device_name = request_device_type()
                     if device_name == 'Else':
-                        self.bot.send_message(personal_chat_id, "If not any of the specified devices didn't "
-                                                                "match the one you fixed, than you don't have to "
-                                                                "report on error code and issue code. Just leave "
-                                                                "it like that and contact @vova_ucs to discuss "
-                                                                "adding new device type...",
+                        self.bot.send_message(personal_chat_id, "Resolved issue will not be marked with an error"
+                                              " and a resolution code, however it will still appear in SupportData",
                                               reply_markup=ReplyKeyboardRemove(), disable_notification=1)
                         stop_event.set()
                         break
@@ -981,7 +978,7 @@ class TelegramChanel:
             monitor_incoming(message)
 
         try:
-            self.bot.polling(non_stop=True)
+            self.bot.polling(non_stop=True, timeout=123)
         except:
             print(f'[{utils.get_date_and_time()}] [{self.str_name}] Polling failed, restarting monitoring ‼️')
             self.restart_monitoring()
