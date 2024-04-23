@@ -6,6 +6,7 @@ import dotenv
 import threading
 import time
 import utils
+from utils import Logger
 import telebot
 from telebot import types
 from telebot.types import ReplyKeyboardRemove
@@ -18,20 +19,20 @@ with open('resolution_codes.json', 'r') as resolution_codes_file:
     resol_dict = json.load(resolution_codes_file)
 
 
-
+logger = Logger(filename="logs", logging_level=0)
 
 class TelegramBot:
     def __init__(self, dotenv_tokenname):
         self.bot = None
         self.dotenv_tokenname = dotenv_tokenname
         self.API_KEY = os.getenv(dotenv_tokenname)
-        print(f'[{utils.get_time()}] [TELEGRAM BOT] Starting telegram bot with api token {dotenv_tokenname} '
-              f'in .env file...')
+        logger.log(f'[{utils.get_time()}] [TELEGRAM BOT] Starting telegram bot with api token {dotenv_tokenname} '
+              f'in .env file...', 1)
 
     def start_bot(self):
         self.bot = telebot.TeleBot(self.API_KEY, threaded=True)
         # telebot.logger.setLevel(logging.DEBUG)
-        print(f'[{utils.get_time()}] [TELEGRAM BOT {self.dotenv_tokenname}] Telegram bot started! ✔')
+        logger.log(f'[{utils.get_time()}] [TELEGRAM BOT {self.dotenv_tokenname}] Telegram bot started! ✔', 1)
         return self.bot
 
 
@@ -154,30 +155,30 @@ class UCSAustriaChanel:
         self.bot.send_message(self.chat_id, message_text, disable_notification=1)
 
     def clear_pending_updates(self):
-        print(f'[{utils.get_time()}] [MAIN BOT] [CLEARING PENDING UPDATES] Started clearing updates...')
+        logger.log(f'[{utils.get_time()}] [MAIN BOT] [CLEARING PENDING UPDATES] Started clearing updates...', 1)
         try:
             updates = self.bot.get_updates()
             if updates:
                 last_update_id = updates[-1].update_id
                 # Clear all pending updates
                 updates = self.bot.get_updates(offset=last_update_id + 1)
-                print("All pending updates have been cleared.")
+                logger.log("All pending updates have been cleared.", 1)
             else:
-                print("No updates to clear.")
+                logger.log("No updates to clear.", 1)
         except Exception as e:
-            print(f'[{utils.get_time()}] [CLEAR PENDING UPDATES] Error: {e}')
+            logger.log(f'[{utils.get_time()}] [CLEAR PENDING UPDATES] Error: {e}', 3)
 
     def request_problem_resoluion_codes(self, row, employee, restaurant_name):
-        print(f'[{utils.get_time()}] [{employee.upper()} PERSONAL CHAT] Starting request for error code and resolution'
-              f'code. Restaurant name - {restaurant_name}. Deactivating other commands...')
+        logger.log(f'[{utils.get_time()}] [{employee.upper()} PERSONAL CHAT] Starting request for error code and resolution'
+              f'code. Restaurant name - {restaurant_name}. Deactivating other commands...', 1)
         personal_chat_id = str(os.getenv(f'{employee.upper()}_TELEGRAM_ID'))
         self.pause_personal_monitoring = True
         if employee == 'Bot':
             return
 
         def request_device_type():
-            print(f'[{utils.get_time()}] [{employee.upper()} PERSONAL CHAT] Requesting now device type. Checking for '
-                  f'updates...')
+            logger.log(f'[{employee.upper()} PERSONAL CHAT] Requesting now device type. Checking for '
+                  f'updates...', 1)
             markup = types.ReplyKeyboardMarkup(row_width=2)
             device_types = list(statistics.load_error_descriptions().keys())
             with_else = device_types + ['Not an issue']
@@ -192,23 +193,23 @@ class UCSAustriaChanel:
                 for update in updates:
                     if update.message and str(update.message.chat.id) == personal_chat_id:
                         if update.message.text in device_types:
-                            print(f'[{utils.get_time()}] [{employee.upper()} PERSONAL CHAT] Given device '
-                                  f'{update.message.text} exists in the list, therefore it is successfully specified')
+                            logger.log(f'[{employee.upper()} PERSONAL CHAT] Given device '
+                                  f'{update.message.text} exists in the list, therefore it is successfully specified', 1)
                             return update.message.text
                         elif update.message.text == 'Not an issue':
-                            print(f'[{utils.get_time()}] [REQ ERR SOL] User chose device type "Else" for device type')
+                            logger.log(f'[{utils.get_time()}] [REQ ERR SOL] User chose device type "Else" for device type', 1)
                             return 'Else'
                         else:
-                            print(f'[{utils.get_time()}] [REQ ERR SOL] Specified device type by user is not in list'
-                                  f'. Message text: {update.message.text}')
+                            logger.log(f'[{utils.get_time()}] [REQ ERR SOL] Specified device type by user is not in list'
+                                  f'. Message text: {update.message.text}', 2)
                             self.bot.send_message(personal_chat_id,
                                                   'Please click on one of the buttons to proceed. If you are trying '
                                                   'to specify device that was not in the list, click "Else"',
                                                   reply_markup=markup, disable_notification=1)
                             self.clear_pending_updates()
                     else:
-                        print(f'[{utils.get_time()}] [REQ ERR] Either update does not contain message, or it was not '
-                              f'written in correct chat.\n\tChat dump:{update.message.chat} \n\tDump: {update}')
+                        logger.log(f'[{utils.get_time()}] [REQ ERR] Either update does not contain message, or it was not '
+                              f'written in correct chat.\n\tChat dump:{update.message.chat} \n\tDump: {update}', 2)
                 time.sleep(1)
 
         def request_issue_type():
@@ -563,7 +564,8 @@ class UCSAustriaChanel:
                                                               str(statistics.format_statistics(codes)),
                                                               parse_mode='HTML')
                                     else:
-                                        self.bot.send_message(chat_id, 'Error❌\n Specified date is not supported. Please '
+                                        self.bot.send_message(chat_id, 'Error❌\n Specified date is not supported. '
+                                                                       'Please'
                                                                        'use DD.MM.YYY format for entering date')
                                 elif restaurant_name == 'help':
                                     # /stat test from April 2024 till May 2024
