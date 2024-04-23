@@ -21,7 +21,7 @@ def is_holiday():
 
 
 def write_lists_to_file(lists, filename):
-    with open(filename, 'w') as f:
+    with open(filename, 'w', encoding='utf-8') as f:
         for lst in lists:
             for item in lst:
                 f.write(f'{item}\n')
@@ -29,7 +29,7 @@ def write_lists_to_file(lists, filename):
 
 
 def read_lists_from_file(filename):
-    with open(filename, 'r') as f:
+    with open(filename, 'r', encoding='utf-8') as f:
         lists = []
         current_list = []
         for line in f:
