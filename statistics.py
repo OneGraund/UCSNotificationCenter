@@ -5,7 +5,7 @@ import re
 import utils
 from utils import Logger
 
-logger = Logger('logs', '', 0)
+logger = Logger(filename='logs',  logging_level=0)
 
 
 def get_description(code, descriptions):
