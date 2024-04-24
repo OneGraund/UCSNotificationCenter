@@ -48,7 +48,7 @@ class Logger:
             level_msg = 'CRITICAL'
 
         if level >= self.logging_level:
-            with open(self.filename, "a") as file:
+            with open(self.filename, "a", encoding='utf-8') as file:
                 print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] - {level_msg} - {message}")
                 file.write(
                     f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] - {level_msg} - {message}\n"

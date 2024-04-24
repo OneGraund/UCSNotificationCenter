@@ -10,6 +10,9 @@ import time
 import utils
 from sheets import SupportWKS, SupportDataWKS
 from gui import input_thread
+from utils import Logger
+
+logger = Logger(filename="logs", logging_level=0)
 
 # sup
 
@@ -154,15 +157,15 @@ if __name__ == '__main__':
     elif new_HOST[0] is None and new_HOST[1] is None:
         HOST = (tmp_tuple_host[0], tmp_tuple_host[1])
     else:
-        print('HOST specification is bad...')
+        logger.log('HOST specification is bad...', 3)
         HOST = (tmp_tuple_host[0], tmp_tuple_host[1])
 
-    print(f'[{utils.get_date_and_time()}] [MAIN] STARTING SCRIPT!!!! \n\tPARAMS:\n'
+    logger.log(f'[{utils.get_date_and_time()}] [MAIN] STARTING SCRIPT!!!! \n\tPARAMS:\n'
           f'\t\tTEST={TEST}, START_MUTED={START_MUTED}, ASK_RESOL_STAT={ASK_RESOL_STAT},\n'
           f'\t\tNOTIFY_ON_START={NOTIFY_UCS_ON_START}, REQUEST_ERROR_RESOLUTION_CODE={REQUEST_ERROR_RESOLUTION_CODE}\n'
           f'\t\tTELEPHONY_HOST={HOST}, WORKSHEETS_UPD_INTERVALS={WORKSHEETS_UPD_INTERVALS}\n'
-          f'\t\tWORKSHEETS_OUTPUT_UPDATES={WORKSHEETS_OUTPUT_UPDATES}')
-    print(f'[{utils.get_date_and_time()}] [MAIN SCRIPT] [EMPLOYEES] Employees that are in db: {employees}')
+          f'\t\tWORKSHEETS_OUTPUT_UPDATES={WORKSHEETS_OUTPUT_UPDATES}', 1)
+    logger.log(f'[{utils.get_date_and_time()}] [MAIN SCRIPT] [EMPLOYEES] Employees that are in db: {employees}', 1)
     if not FAST_START:
         if TEST:
             time.sleep(5)
@@ -228,4 +231,4 @@ if __name__ == '__main__':
                              fast_start=FAST_START
                              )
 
-    print(f'[{utils.get_date_and_time()}] [MAIN] Starting issue handling thread...')
+    logger.log(f'[{utils.get_date_and_time()}] [MAIN] Starting issue handling thread...', 1)

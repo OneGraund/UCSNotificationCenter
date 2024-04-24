@@ -7,6 +7,9 @@ import threading
 import holidays
 import statistics
 import utils
+from utils import Logger
+
+logger = Logger(filename="logs", logging_level=0)
 
 dotenv.load_dotenv()
 
@@ -47,15 +50,15 @@ def read_lists_from_file(filename):
 class Spreadsheet:
     def __init__(self):
         self.spreadsheet_name = os.getenv('GOOGLE_SHEETS_SPREADSHEET_NAME')
-        print(f'[{utils.get_time()}] [SPREADSHEET {self.spreadsheet_name.upper()}] '
-              f'Opening spreadsheet {self.spreadsheet_name}')
+        logger.log(f'[SPREADSHEET {self.spreadsheet_name.upper()}] '
+              f'Opening spreadsheet {self.spreadsheet_name}', 1)
         self.service_account = gspread.service_account('./service_account.json')
         self.spreadsheet = self.establish_gspread_connection(self.spreadsheet_name)
 
-        print(f'[{utils.get_time()}] [SPREADSHEET {self.spreadsheet_name.upper()}] '
-              f'Spreadsheet opened successfully ✅ \n\tAvailable worksheets: ')
+        logger.log(f'[SPREADSHEET {self.spreadsheet_name.upper()}] '
+              f'Spreadsheet opened successfully ✅ \n\tAvailable worksheets: ', 1)
         for wks in self.spreadsheet.worksheets():
-            print(f'\t{wks}')
+            logger.log(f'\t{wks}', 0)
 
     def establish_gspread_connection(self, spreadsheet_name):
         spreadsheet = None
@@ -66,11 +69,11 @@ class Spreadsheet:
             except Exception as e:
                 connection_error = str(e)
             if connection_error:
-                print(f'[{utils.get_date_and_time()}] [ERROR CONNECTING WITH GSPREAD] Gspread '
-                      f'could not open spreadsheet {spreadsheet_name}. Retrying after 10 seconds...')
+                logger.log(f'[{utils.get_date_and_time()}] [ERROR CONNECTING WITH GSPREAD] Gspread '
+                      f'could not open spreadsheet {spreadsheet_name}. Retrying after 10 seconds...', 3)
                 time.sleep(10)
             else:
-                print(f'[{utils.get_time()}] [GSPREAD] Connected to spreadsheet {spreadsheet_name} successfully')
+                logger.log(f'[GSPREAD] Connected to spreadsheet {spreadsheet_name} successfully', 1)
                 break
         return spreadsheet
 
@@ -80,22 +83,26 @@ class Worksheet(Spreadsheet):
         super().__init__()
         self.OUTPUT_UPDATES = OUTPUT_UPDATES
         self.UPD_INTERVAL = UPD_INTERVAL
-        print(f'[{utils.get_time()}] [WORKSHEET {worksheet_name.upper()}] Opening worksheet named {worksheet_name}')
+        logger.log(f'[WORKSHEET {worksheet_name.upper()}] Opening worksheet named {worksheet_name}', 0)
         self.worksheet_name = worksheet_name
         self.worksheet = self.spreadsheet.worksheet(worksheet_name)
         self.buff = self.worksheet.get_all_values()
         write_lists_to_file(self.buff, f'{self.worksheet_name}_buff.txt')
-        print(f'[{utils.get_time()}] [WORKSHEET {worksheet_name.upper()}] Opened worksheet and created buff in '
-              f'{worksheet_name}_buff.txt ✅')
-        print(f'[{utils.get_time()}] [WORKSHEET {worksheet_name.upper()}] Starting buff updater...')
+        logger.log(f'[WORKSHEET {worksheet_name.upper()}] Opened worksheet and created buff in '
+              f'{worksheet_name}_buff.txt ✅', 0)
+        logger.log(f'[WORKSHEET {worksheet_name.upper()}] Starting buff updater...', 1)
         buff_updater_thread = threading.Thread(target=self.buff_updater, args=())
         buff_updater_thread.start()
 
     def get_buff(self):
-        return read_lists_from_file(f'{self.worksheet_name}_buff.txt')
+        logger.log('[WORKSHEET CLASS] Getting buff...')
+        try:
+            return read_lists_from_file(f'{self.worksheet_name}_buff.txt')
+        except Exception as e:
+            logger.log(f'[WORKSHEET CLASS] Failed getting buff for {self.worksheet}, reason {e}', 3)
 
     def buff_updater(self):
-        print(f'[{self.worksheet_name.upper()} BUFFER UPDATER] Buffer updater is started and regularly updates .txt ✅')
+        logger.log(f'[{self.worksheet_name.upper()} BUFFER UPDATER] Buffer updater is started and regularly updates .txt ✅', 0)
         while True:
             time.sleep(60 * self.UPD_INTERVAL)
             for i in range(0, 5):
@@ -105,16 +112,16 @@ class Worksheet(Spreadsheet):
                 except Exception as e:
                     connection_error = str(e)
                 if connection_error:
-                    print(f'[{utils.get_date_and_time()}] [ERROR CONNECTING WITH GSPREAD] Gspread '
-                          f'could not establish connection to google sheets...')
+                    logger.log(f'[{utils.get_date_and_time()}] [ERROR CONNECTING WITH GSPREAD] Gspread '
+                          f'could not establish connection to google sheets...', 3)
                     time.sleep(4)
                     if i == 3:
-                        print(f'[BUFFER NOT UPDATE] Could not update buffer for {self.worksheet_name.upper()} because '
-                              f'of error when connecting to google sheets API...')
+                        logger.log(f'[BUFFER NOT UPDATE] Could not update buffer for {self.worksheet_name.upper()} because '
+                              f'of error when connecting to google sheets API...', 4)
                 else:
                     break
             if self.OUTPUT_UPDATES:
-                print(f'[{utils.get_time()}]\t[{self.worksheet_name.lower()} buffer] updated 💤')
+                logger.log(f'[{utils.get_time()}]\t[{self.worksheet_name.lower()} buffer] updated 💤', 0)
 
 
 class SupportWKS(Worksheet):
@@ -134,10 +141,10 @@ class SupportWKS(Worksheet):
                     if value[0] == datetime.now().strftime("%d-%b-%Y"):
                         at_row = row
                 self.worksheet.update(f'D{at_row}', holiday_payment)
-                print(f'\t[{utils.get_date_and_time()}][SUPPORT WORKSHEET] Today is holiday, updated payment 🎁')
+                logger.log(f'\t[{utils.get_date_and_time()}][SUPPORT WORKSHEET] Today is holiday, updated payment 🎁', 1)
             else:
-                print(f'[{utils.get_date_and_time()}]\t[SUPPORT WORKSHEET] Today is not a holiday, therefore  I am '
-                      f'not changing payment')
+                logger.log(f'[{utils.get_date_and_time()}]\t[SUPPORT WORKSHEET] Today is not a holiday, therefore  I am '
+                      f'not changing payment', 1)
             time.sleep(24 * 60 * 60)
 
     def supporting_today(self):
@@ -218,8 +225,8 @@ class SupportDataWKS(Worksheet):
         return rst_names
 
     def update_problem_resolution_codes(self, row_to_upload, error_code, resol_code):
-        print(f'[SHEETS] [{utils.get_time()}] Received error code and resolution code for row {row_to_upload},'
-              f' error code - {error_code}, resol_code - {resol_code}. Uploading...')
+        logger.log(f'[SHEETS] Received error code and resolution code for row {row_to_upload},'
+              f' error code - {error_code}, resol_code - {resol_code}. Uploading...', 1)
         self.worksheet.update(f'H{row_to_upload}', error_code)
         self.worksheet.update(f'I{row_to_upload}', resol_code)
         self.worksheet.update(f'L{row_to_upload}', statistics.get_erorr_description_from_code(error_code))
@@ -229,33 +236,33 @@ class SupportDataWKS(Worksheet):
 
     def update_error_resol_descriptions(self):
         # fetch not updated rows
-        print(f'[SUPPORTDATA WORKSHEET] Updating SupportData with error descriptions'
-              f'and resolution descriptions that have not been yet entered')
+        logger.log(f'[SUPPORTDATA WORKSHEET] Updating SupportData with error descriptions'
+              f'and resolution descriptions that have not been yet entered', 1)
         time.sleep(3)
         for row_num, row in enumerate(self.get_buff()[1:]):
             if row[7] != '' and row[8] != '' and row[11] == '' and row[12] == '' and row[0] != '' and row[9] != 'test':
                 row[11] = statistics.get_erorr_description_from_code(row[7])
                 row[12] = statistics.get_resolution_descrioption_from_code(row[8])
-                print(f'[SUPPORTDATA WORKSHEET] Updating row {row_num+2} with '
+                logger.log(f'[SUPPORTDATA WORKSHEET] Updating row {row_num+2} with '
                      f'error description and resolution description. \n\tCodes are:'
                      f'{row[7]} {row[8]}\n\tdescriptions: \n\t\t{row[11]}\n\t\t'
-                     f'{row[12]}')
+                     f'{row[12]}', 0)
                 self.worksheet.update(f'L{row_num+2}', row[11])
                 self.worksheet.update(f'M{row_num+2}', row[12])
                 time.sleep(5)
                 #print(row)
 
     def update_device_name_issue_type(self):
-        print(f'[SUPPORTDATA WORKSHEET] Updating SupportData with device names and issue types of issues')
+        logger.log(f'[SUPPORTDATA WORKSHEET] Updating SupportData with device names and issue types of issues', 1)
         time.sleep(3)
         for row_num, row in enumerate(self.get_buff()[1:]):
             if row[0] != '' and row[7] != '' and row[8] != '' and row[13] == '' and row[14] == '' and row[9] != 'test':
                 # row[13] is device name, row[14] is issue type
                 row[13] = statistics.get_device_name_from_code(row[7])
                 row[14] = statistics.get_issue_type_from_code(row[7])
-                print(f'[SUPPORTDATA WORKSHEET] Updating row {row_num + 2} with device names and issue types'
+                logger.log(f'[SUPPORTDATA WORKSHEET] Updating row {row_num + 2} with device names and issue types'
                       f'\n\tCode: {row[7]}, \n\tIssue description: {row[11]},\n\tDevice name: {row[13]}\n\t'
-                      f'Issue type: {row[14]}')
+                      f'Issue type: {row[14]}', 0)
                 self.worksheet.update(f'N{row_num + 2}', row[13])
                 self.worksheet.update(f'O{row_num + 2}', row[14])
                 time.sleep(5)
@@ -264,8 +271,7 @@ class SupportDataWKS(Worksheet):
 
     def upload_issue_data(self, response_time, resolution_time, person_name, restaurant_name, warning_status,
                           problem_code=None, resolution_code=None):
-        if person_name == 'Ivan':  # because in google sheets always Ivan
-            person_name = 'Ivan'
+        logger.log(f'[SUPPORT DATA] Received a request to upload data without error/resol codes', 0)
         current_datetime = datetime.now()
         current_month = current_datetime.strftime('%m')
         current_day = current_datetime.strftime('%d')
@@ -275,10 +281,12 @@ class SupportDataWKS(Worksheet):
         # get_last_row
         row_to_upload_num = None
         for row_id, row in enumerate(self.get_buff()):
+            #logger.log(f'\t{row}', 0)
             if row[0] == '':
                 row_to_upload_num = row_id
                 break
-        print(f'[{utils.get_date_and_time()}] [SUPPORT DATA WKS] Uploading data to row {row_to_upload_num + 1}')
+        logger.log(f'[{utils.get_date_and_time()}] [SUPPORT DATA WKS] Uploading data to row '
+                   f'{row_to_upload_num + 1}', 1)
         row_to_upload_num = row_to_upload_num + 1
         self.worksheet.update(f'A{row_to_upload_num}', person_name)
         self.worksheet.update(f'B{row_to_upload_num}', current_year)
@@ -292,9 +300,17 @@ class SupportDataWKS(Worksheet):
         self.worksheet.update(f'J{row_to_upload_num}', restaurant_name)
         self.worksheet.update(f'K{row_to_upload_num}', warning_status)
 
+        logger.log(f'[SUPPORT DATA WKS] Data was uploaded', 0)
+
         return row_to_upload_num
 
 
 if __name__ == '__main__':
     support_data_wks = SupportDataWKS(UPD_INTERVAL=2, OUTPUT_UPDATES=True)
-    print(support_data_wks.get_object_common_issues('kfc par'))
+    support_data_wks.upload_issue_data(
+        response_time=12,
+        resolution_time=12,
+        person_name='Vova',
+        restaurant_name='test',
+        warning_status='Warning0'
+    )

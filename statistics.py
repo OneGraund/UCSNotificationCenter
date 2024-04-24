@@ -3,6 +3,9 @@ from datetime import datetime
 import re
 
 import utils
+from utils import Logger
+
+logger = Logger('logs', '', 0)
 
 
 def get_description(code, descriptions):
@@ -74,8 +77,8 @@ def parse_command_date(input_str):
         try:
             start_date = datetime.strptime(from_match.group(1), '%d.%m.%Y')
         except Exception as e:
-            print(f'[{utils.get_time()}] [STATISTICS] [PARSE COMMAND DATE] Could not parse '
-                  f'start date. Maybe wrong format? Error: {e}')
+            logger.log(f'[{utils.get_time()}] [STATISTICS] [PARSE COMMAND DATE] Could not parse '
+                  f'start date. Maybe wrong format? Error: {e}', 3)
             return None
     else:
         start_date = min_date
@@ -84,8 +87,8 @@ def parse_command_date(input_str):
         try:
             end_date = datetime.strptime(till_match.group(1), '%d.%m.%Y')
         except Exception as e:
-            print(f'[{utils.get_time()}] [STATISTICS] [PARSE COMMAND DATE] Could not parse '
-                  f'end date. Maybe wrong format? Error: {e}')
+            logger.log(f'[{utils.get_time()}] [STATISTICS] [PARSE COMMAND DATE] Could not parse '
+                  f'end date. Maybe wrong format? Error: {e}', 3)
             return None
     else:
         end_date = current_date
@@ -123,7 +126,7 @@ def update_error_json(updated_errors: dict) -> bool:
             json.dump(updated_errors, file, indent=4)
         return True
     except Exception as e:
-        print(f'[{utils.get_time()}] [STATISTICS] Failed updating error_codes.json. Reason:\n\t{e}')
+        logger.log(f'[{utils.get_time()}] [STATISTICS] Failed updating error_codes.json. Reason:\n\t{e}', 3)
         return False
 
 def update_resol_json(updated_resols: dict) -> bool:
@@ -136,7 +139,7 @@ def update_resol_json(updated_resols: dict) -> bool:
             json.dump(updated_resols, file, indent=4)
         return True
     except Exception as e:
-        print(f'[{utils.get_time()}] [STATISTICS] Failed updating resolution_codes.json. Reason:\n\t{e}')
+        logger.log(f'[{utils.get_time()}] [STATISTICS] Failed updating resolution_codes.json. Reason:\n\t{e}', 3)
         return False
 
 def add_new_error_code(error_desc: str, device_name: str, issue_type: str):
@@ -147,7 +150,7 @@ def add_new_error_code(error_desc: str, device_name: str, issue_type: str):
 
     max_error = int(list(error_descriptions[device_name][issue_type].values())[0][6:])
     for value in list(error_descriptions[device_name][issue_type].values()):
-        print(f'Value: {value}. Type: {type(value)}')
+        logger.log(f'Value: {value}. Type: {type(value)}', 0)
         if int(value[6:]) > max_error:
             max_error = int(value[6:])
     category = str(list(error_descriptions[device_name][issue_type].values())[0].split(' ')[1][:2])
@@ -156,11 +159,11 @@ def add_new_error_code(error_desc: str, device_name: str, issue_type: str):
 
     error_descriptions[device_name][issue_type][error_desc] = new_error_code
     if update_error_json(error_descriptions):
-        print(f'[{utils.get_time()}] [STATISTICS] Successfully added new error code for Category: {device_name} '
-              f'{issue_type}. Description: {error_desc}. New error_code: {new_error_code}')
+        logger.log(f'[{utils.get_time()}] [STATISTICS] Successfully added new error code for Category: {device_name} '
+              f'{issue_type}. Description: {error_desc}. New error_code: {new_error_code}', 1)
         return new_error_code
     else:
-        print(f"[{utils.get_time()}] [STATISTICS] Failed adding new error_code to json file. Exiting add_new_error_code")
+        logger.log(f"[{utils.get_time()}] [STATISTICS] Failed adding new error_code to json file. Exiting add_new_error_code", 3)
         return None
 
 def add_new_resol_code(resol_desc: str, device_name: str, issue_type: str):
@@ -171,7 +174,7 @@ def add_new_resol_code(resol_desc: str, device_name: str, issue_type: str):
 
     max_error = int(list(resolution_descriptions[device_name][issue_type].values())[0][6:])
     for value in list(resolution_descriptions[device_name][issue_type].values()):
-        print(f'Value: {value}. Type: {type(value)}')
+        logger.log(f'Value: {value}. Type: {type(value)}', 0)
         if int(value[6:]) > max_error:
             max_error = int(value[6:])
     category = str(list(resolution_descriptions[device_name][issue_type].values())[0].split(' ')[1][:2])
@@ -180,11 +183,11 @@ def add_new_resol_code(resol_desc: str, device_name: str, issue_type: str):
 
     resolution_descriptions[device_name][issue_type][resol_desc] = new_resol_code
     if update_resol_json(resolution_descriptions):
-        print(f'[{utils.get_time()}] [STATISTICS] Successfully added new resol code for Category: {device_name} '
-              f'{issue_type}. Description: {resol_desc}. New resol_code: {new_resol_code}')
+        logger.log(f'[{utils.get_time()}] [STATISTICS] Successfully added new resol code for Category: {device_name} '
+              f'{issue_type}. Description: {resol_desc}. New resol_code: {new_resol_code}', 1)
         return new_resol_code
     else:
-        print(f"[{utils.get_time()}] [STATISTICS] Failed adding new resol_code to json file. Exiting add_new_resol_code")
+        logger.log(f"[{utils.get_time()}] [STATISTICS] Failed adding new resol_code to json file. Exiting add_new_resol_code", 3)
         return None
 
 def return_device_names():
@@ -196,7 +199,7 @@ def return_device_names():
         return dvcs_errors
     else:
         print(f'[{utils.get_time()}] [RETURN DEVICE NAMES] Devices in error_codes.json and in resolution_codes.json'
-              f' dont match...')
+              f' dont match...', 3)
         return None
 
 def map_errors_and_resolutions_to_codes():
@@ -223,7 +226,7 @@ def map_errors_and_resolutions_to_codes():
                 second_two_nums = str(sw_err_id)
             error_codes[device]['Software'][sw_err] = \
                 f'Error {first_two_nums}{second_two_nums}'
-            print(f'Assigning: Error {first_two_nums}{second_two_nums},'
+            logger.log(f'Assigning: Error {first_two_nums}{second_two_nums},'
                   f'to {device} software {sw_err}')
 
         first_two_nums = int(first_two_nums)
@@ -239,8 +242,8 @@ def map_errors_and_resolutions_to_codes():
                 second_two_nums = f'0{hd_err_id}'
             else:
                 second_two_nums = str(hd_err_id)
-            print(f'Assigning: Error {first_two_nums}{second_two_nums},'
-                  f'to {device} hardware {hd_err}')
+            logger.log(f'Assigning: Error {first_two_nums}{second_two_nums},'
+                  f'to {device} hardware {hd_err}', 3)
             error_codes[device]['Hardware'][hd_err] = \
                 f'Error {first_two_nums}{second_two_nums}'
 
@@ -264,8 +267,8 @@ def map_errors_and_resolutions_to_codes():
                 second_two_nums = str(sw_err_id)
             resolution_codes[device]['Software'][sw_err] = \
                 f'Error {first_two_nums}{second_two_nums}'
-            print(f'Assigning: Resol {first_two_nums}{second_two_nums},'
-                  f'to {device} software {sw_err}')
+            logger.log(f'Assigning: Resol {first_two_nums}{second_two_nums},'
+                  f'to {device} software {sw_err}', 3)
 
         first_two_nums = int(first_two_nums)
         first_two_nums += 1
@@ -280,8 +283,8 @@ def map_errors_and_resolutions_to_codes():
                 second_two_nums = f'0{hd_err_id}'
             else:
                 second_two_nums = str(hd_err_id)
-            print(f'Assigning: Resol {first_two_nums}{second_two_nums},'
-                  f'to {device} hardware {hd_err}')
+            logger.log(f'Assigning: Resol {first_two_nums}{second_two_nums},'
+                  f'to {device} hardware {hd_err}', 3)
             resolution_codes[device]['Hardware'][hd_err] = \
                 f'Resol {first_two_nums}{second_two_nums}'
     update_error_json(error_codes)
