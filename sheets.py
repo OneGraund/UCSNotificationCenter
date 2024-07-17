@@ -270,7 +270,7 @@ class SupportDataWKS(Worksheet):
 
 
     def upload_issue_data(self, response_time, resolution_time, person_name, restaurant_name, warning_status,
-                          problem_code=None, resolution_code=None):
+                          restaurant_country, problem_code=None, resolution_code=None):
         logger.log(f'[SUPPORT DATA] Received a request to upload data without error/resol codes', 0)
         current_datetime = datetime.now()
         current_month = current_datetime.strftime('%m')
@@ -299,10 +299,38 @@ class SupportDataWKS(Worksheet):
         self.worksheet.update(f'I{row_to_upload_num}', resolution_code)
         self.worksheet.update(f'J{row_to_upload_num}', restaurant_name)
         self.worksheet.update(f'K{row_to_upload_num}', warning_status)
+        self.worksheet.update(f'P{row_to_upload_num}', restaurant_country)
 
         logger.log(f'[SUPPORT DATA WKS] Data was uploaded', 0)
 
         return row_to_upload_num
+
+    # Goes through support data wks and fetches issues that WERE closed in telegram channels, but didn't have
+    # completed error/resolution codes
+    # Input:
+    #   employee: str employee
+    #   month:    int of a month to be checked (default this month)
+    #   year:     int of a year to be checked (default this year)
+    # Returns:
+    #   2-D array of tickets, where first dimensions are tickets themselves and second one its location in spreadsheet
+    def retrieve_incomplete_tickets(self, employee, month=utils.get_int_month(), year=utils.get_int_year()):
+        logger.log(f'[SUPPORT DATA WKS] Retrieving incomplete tickets for {employee}, {month}, {year}', 1)
+        tickets = []
+        rows = []
+        for row_num, row in enumerate(self.get_buff()[1:]):
+            if row[0] == employee and row[1] == year and row[2] == month and row[7] == '' and row[8] == '':
+                tickets.append(row)
+                rows.append(row_num+1)
+                # MIGHT BE OFF BY 1
+            if row[0] == '' and row[1] == '' and row[2] == '' and row[3] == '':
+                break
+        return [tickets, rows]
+
+
+
+
+
+
 
 
 if __name__ == '__main__':

@@ -452,10 +452,15 @@ class UCSAustriaChanel:
                 if device_name is None and issue_type is None and error_code is None and resolution_code is None:
                     device_name = request_device_type()
                     if device_name == 'Else':
-                        self.bot.send_message(personal_chat_id, "Resolved issue will not be marked with an error"
-                                              " and a resolution code, however it will still appear in SupportData",
-                                              reply_markup=ReplyKeyboardRemove(), disable_notification=1)
+                        #self.bot.send_message(personal_chat_id, "Resolved issue will not be marked with an error"
+                        #                      " and a resolution code, however it will still appear in SupportData",
+                        #                      reply_markup=ReplyKeyboardRemove(), disable_notification=1)
+                        self.bot.send_message(personal_chat_id, "Resolved issue will be marked with a 0000 error and "
+                                                                "resolution code, practicaly identifying it as not "
+                                                                "an issue")
+                        self.support_data_wks.update_problem_resolution_codes(row, '0000', '0000')
                         self.send_message(f'Issue in {restaurant_name} was not an Issue')
+                        logger.log(f'[REQ ERR] User marked an issue as not an issue, it will be updated as so')
                         stop_event.set()
                         break
                     else:
@@ -549,6 +554,28 @@ class UCSAustriaChanel:
                                 except Exception as e:
                                     logger.log(f'[KILLYOURSELF ERROR] Failed running os._exit(0),'
                                           f' info: {e}', 5)
+                            elif '/pending' in text:
+                                logger.log(f'[PERSONAL CHAT COMMAND] [PENDING] Employee requested to retrieve data on'
+                                           f' incomplete tickets...', 1)
+                                splitted = text.split(' ')
+                                tickets = None
+                                if len(splitted) == 1:
+                                    tickets = self.support_data_wks.retrieve_incomplete_tickets(
+                                        employee = is_from_ucs(update.message)
+                                    )
+                                elif len(splitted) == 2:
+                                    tickets = self.support_data_wks.retrieve_incomplete_tickets(
+                                        employee = is_from_ucs(update.message),
+                                        month = splitted[1]
+                                    )
+                                elif len(splitted) == 3:
+                                    tickets = self.support_data_wks.retrieve_incomplete_tickets(
+                                        employee = is_from_ucs(update.message),
+                                        month = splitted[1],
+                                        year = splitted[2]
+                                    )
+                                logger.log(f'\t[PENDING] tickets: {tickets}', 0)
+                                self.bot.send_message(utils.format_incomplete_tickets(tickets))
 
                             elif '/stat' in text:
                                 restaurant_name = statistics.extract_restaurant_name_generic(text)
@@ -845,7 +872,8 @@ class TelegramChanel:
             row = self.support_data_wks.upload_issue_data(
                 response_time=rp_time, resolution_time=elapsed_time,
                 person_name=is_from_ucs(message, self.employees), restaurant_name=self.str_name,
-                warning_status=self.responsed_at_warning_level
+                warning_status=self.responsed_at_warning_level,
+                restaurant_country = self.language
             )
             if self.REQUEST_ERROR_RESOLUTION_CODE:
                 logger.log(f'[{self.str_name.upper()}] REQ ERR RESOL CODE row is saved to later be updated', 0)
@@ -935,15 +963,18 @@ class TelegramChanel:
             elif is_from_ucs(message, self.employees) and (
                     lowered_message == 'not an issue' or lowered_message == 'lock' or lowered_message == 'not a issue'):
                 # or 'kein problem' in lowered_message:
-                self.status = 'locked'
+                #self.status = 'locked'
+                self.status = 'resolved'
                 self.stop_event.set()
                 self.warning = 'no warning'
                 self.done_reminders_sent = 0
-                logger.log(f'[{self.str_name.upper()} TG CHANEL] false issue. Setting to locked :|', 2)
-                self.send_message('Okay, removing issue. Locking bot for further discussion. Type "Unlock" to unlock')
+                #logger.log(f'[{self.str_name.upper()} TG CHANEL] false issue. Setting to locked :|', 2)
+                logger.log(f'[{self.str_name.upper()}] TG CHANEL] false issue, removing unresolved status and thats it')
+                self.send_message('Okay, issue removed')
             # """-----------------------------------------------------------------------"""
 
             # """-----------------Unlocking chanel--------------------------------------"""
+            # NO LONGER NEEDED, JUST FOR HISTORY PURPOSE
             elif is_from_ucs(message, self.employees) and lowered_message == 'unlock' and self.status == 'locked':
                 self.status = 'resolved'
                 self.done_reminders_sent = 0
@@ -954,7 +985,10 @@ class TelegramChanel:
             # """-------------Remove warning, but leave unresolved status---------------"""
             elif is_from_ucs(message, self.employees) and self.status == 'unresolved' and self.warning != 'no warning':
                 self.who_answered_to_report = is_from_ucs(message, self.employees)
-                self.send_message(f'{self.who_answered_to_report} is now resolving the issue in {self.str_name} after '
+                #self.send_message(f'{self.who_answered_to_report} is now resolving the issue in {self.str_name} after '
+                #                  f'{self.warning}')
+                self.main_chanel.send_message('{self.who_answered_to_report} is now resolving the issue in {'
+                                              'self.str_name} after'
                                   f'{self.warning}')
                 self.responsed_at_warning_level = self.warning
                 self.stop_event.set()

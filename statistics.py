@@ -291,15 +291,23 @@ def map_errors_and_resolutions_to_codes():
     update_resol_json(resolution_codes)
 
 def get_erorr_description_from_code(code):
+    if code == '0000':
+        return 'Not an issue'
     return get_description(code, load_error_descriptions())
 
 def get_resolution_descrioption_from_code(code):
+    if code == '0000':
+        return 'Not an issue'
     return get_description(code, load_resolutions_descriptions())
 
 def get_device_name_from_code(code):
+    if code == '0000':
+        return 'Not an issue'
     return get_dvc_name_iss_type(code, load_error_descriptions())[0]
 
 def get_issue_type_from_code(code):
+    if code == '0000':
+        return 'Not an issue'
     return get_dvc_name_iss_type(code, load_error_descriptions())[1]
 
 if __name__ == '__main__':
