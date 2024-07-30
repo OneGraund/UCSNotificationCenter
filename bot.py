@@ -457,7 +457,8 @@ class UCSAustriaChanel:
                         #                      reply_markup=ReplyKeyboardRemove(), disable_notification=1)
                         self.bot.send_message(personal_chat_id, "Resolved issue will be marked with a 0000 error and "
                                                                 "resolution code, practicaly identifying it as not "
-                                                                "an issue")
+                                                                "an issue",reply_markup=ReplyKeyboardRemove(),
+                                              disable_notification=1)
                         self.support_data_wks.update_problem_resolution_codes(row, '0000', '0000')
                         self.send_message(f'Issue in {restaurant_name} was not an Issue')
                         logger.log(f'[REQ ERR] User marked an issue as not an issue, it will be updated as so')
@@ -575,7 +576,9 @@ class UCSAustriaChanel:
                                         year = splitted[2]
                                     )
                                 logger.log(f'\t[PENDING] tickets: {tickets}', 0)
-                                self.bot.send_message(utils.format_incomplete_tickets(tickets))
+                                formated_tickets = utils.format_incomplete_tickets(tickets)
+                                logger.log(formated_tickets, 0)
+                                self.bot.send_message(chat_id, formated_tickets)
 
                             elif '/stat' in text:
                                 restaurant_name = statistics.extract_restaurant_name_generic(text)
@@ -612,7 +615,8 @@ class UCSAustriaChanel:
                         last_update_id = updates[-1].update_id
                         self.bot.get_updates(offset=last_update_id + 1, timeout=1)
                 except Exception as e:
-                    logger.log(f"Error fetching updates in personal monitoring thread: {e}", 3)
+                    logger.log(f"Error fetching updates in personal monitoring thread:"
+                               f" {e}\n{traceback.format_exc()}", 3)
                     self.clear_pending_updates()
             #else:
             #    print("Polling paused.")
@@ -987,8 +991,8 @@ class TelegramChanel:
                 self.who_answered_to_report = is_from_ucs(message, self.employees)
                 #self.send_message(f'{self.who_answered_to_report} is now resolving the issue in {self.str_name} after '
                 #                  f'{self.warning}')
-                self.main_chanel.send_message('{self.who_answered_to_report} is now resolving the issue in {'
-                                              'self.str_name} after'
+                self.main_chanel.send_message(f'{self.who_answered_to_report} is now resolving the issue in '
+                                              f'{self.str_name} after'
                                   f'{self.warning}')
                 self.responsed_at_warning_level = self.warning
                 self.stop_event.set()

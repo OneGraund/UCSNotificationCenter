@@ -317,10 +317,14 @@ class SupportDataWKS(Worksheet):
         logger.log(f'[SUPPORT DATA WKS] Retrieving incomplete tickets for {employee}, {month}, {year}', 1)
         tickets = []
         rows = []
+        month = str(month)
+        if len(month) == 1:
+            month = '0' + month
+        year = str(year)
         for row_num, row in enumerate(self.get_buff()[1:]):
             if row[0] == employee and row[1] == year and row[2] == month and row[7] == '' and row[8] == '':
                 tickets.append(row)
-                rows.append(row_num+1)
+                rows.append(row_num+2)
                 # MIGHT BE OFF BY 1
             if row[0] == '' and row[1] == '' and row[2] == '' and row[3] == '':
                 break
@@ -335,10 +339,6 @@ class SupportDataWKS(Worksheet):
 
 if __name__ == '__main__':
     support_data_wks = SupportDataWKS(UPD_INTERVAL=2, OUTPUT_UPDATES=True)
-    support_data_wks.upload_issue_data(
-        response_time=12,
-        resolution_time=12,
-        person_name='Vova',
-        restaurant_name='test',
-        warning_status='Warning0'
-    )
+    time.sleep(4)
+    tickets = support_data_wks.retrieve_incomplete_tickets('Egor')
+    print(utils.format_incomplete_tickets(tickets))

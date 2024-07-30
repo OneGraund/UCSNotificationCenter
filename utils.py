@@ -18,10 +18,10 @@ def get_int_month():
     return int(datetime.now().strftime("%m"))
 
 def format_incomplete_tickets(tickets):
-    to_return = (f'For year {tickets[0][0][1]}, at month {tickets[0][0][2]}, you have {len(tickets)} closed tickets '
+    to_return = (f'For year {tickets[0][0][1]}, at month {tickets[0][0][2]}, you have {len(tickets[0])} closed tickets '
                  f'with unspecified error/resolution codes:\n')
     for ticket in tickets[0]:
-        to_return += f'• Restaurant: {ticket[9]}, \n\tday: {ticket[3]}, time: {ticket[4]}'
+        to_return += f'• Restaurant: {ticket[9]}, day: {ticket[3]}, time: {ticket[4][:5]}\n'
     return to_return
 
 
