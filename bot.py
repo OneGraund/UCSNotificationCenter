@@ -169,11 +169,11 @@ class UCSAustriaChanel:
         except Exception as e:
             logger.log(f'[CLEAR PENDING UPDATES] Error: {e}', 3)
 
-    def request_problem_resoluion_codes(self, row, employee, restaurant_name):
+    def request_problem_resoluion_codes(self, row, employee, restaurant_name, normal_mode = True):
         logger.log(f'[{employee.upper()} PERSONAL CHAT] Starting request for error code and resolution'
               f'code. Restaurant name - {restaurant_name}. Deactivating other commands...', 1)
         personal_chat_id = str(os.getenv(f'{employee.upper()}_TELEGRAM_ID'))
-        self.pause_personal_monitoring = True
+        self.pause_personal_monitoring = normal_mode
         if employee == 'Bot':
             return
 
@@ -534,6 +534,22 @@ class UCSAustriaChanel:
         threading.Thread(target=check_for_error,
                          args=(stop_event,)).start()
 
+    def fill_pending_tickets(self, tickets, chat_id):
+        """
+        Lets user fill up closed tickets without error/resol codes. STOPS if self.pause_personal_monitoring is set
+        Input:
+            tickets - a 2D array of form: tickets = [ [1756, 1812], [ 'Normal support data row' ] ]
+            chat_id - id of a personal chat of employee
+        Output:
+            None, only telegram stuff going on
+        """
+        logger.log('[FILL PENDING] Currently in fill_pending_tickets function', 0)
+        for id, ticket in enumerate(tickets[0]):
+            logger.log(f'[FILL PENDING] Now on ticket: {ticket}', 0)
+            self.request_problem_resoluion_codes(tickets[1][id], ticket[0], ticket[9], normal_mode=False)
+        logger.log('[FILL PENDING] All request tickets are now currently filled, exiting', 1)
+
+
     def personal_chat_monitoring_thread(self):
         while True:  # Replace with a more suitable condition for your application
             if not self.pause_personal_monitoring:
@@ -556,6 +572,10 @@ class UCSAustriaChanel:
                                     logger.log(f'[KILLYOURSELF ERROR] Failed running os._exit(0),'
                                           f' info: {e}', 5)
                             elif '/pending' in text:
+                                '''/pending can be specified with additional parameters like that: 
+                                    /pending 7 2023 or /pending 7 (for current year)
+                                    /pending (for current month and current year)
+                                '''
                                 logger.log(f'[PERSONAL CHAT COMMAND] [PENDING] Employee requested to retrieve data on'
                                            f' incomplete tickets...', 1)
                                 splitted = text.split(' ')
@@ -578,7 +598,44 @@ class UCSAustriaChanel:
                                 logger.log(f'\t[PENDING] tickets: {tickets}', 0)
                                 formated_tickets = utils.format_incomplete_tickets(tickets)
                                 logger.log(formated_tickets, 0)
-                                self.bot.send_message(chat_id, formated_tickets)
+                                markup = types.ReplyKeyboardMarkup(row_width=2)
+                                answers = ['Yes ✅', 'Nope 🚫']
+                                markup = generate_buttons(answers, markup)
+                                self.bot.send_message(chat_id, formated_tickets, reply_markup=markup)
+                                # set while true cycle, with a stop event because if new request
+                                # comes, we want to stop this bullshit
+                                break_condition = False
+                                logger.log(f'[PENDING] Asking user whether he want to fill up unfullfiled tickets', 1)
+                                self.clear_pending_updates()
+                                while not self.pause_personal_monitoring and not break_condition:
+                                    updates = self.bot.get_updates()
+                                    for update in updates:
+                                        if update.message:
+                                            if str(update.message.chat.id) == str(chat_id):
+                                                if update.message.text == 'Yes ✅':
+                                                    logger.log(f'[PENDING] User does want to fill up tickets. Starting the'
+                                                               f' process...')
+                                                    self.fill_pending_tickets(tickets, chat_id)
+                                                    self.bot.send_message(chat_id,
+                                                                          'Thanks! Specified tickets now have error/resol'
+                                                                          'codes! Please try to fill them in time next time'
+                                                                          ' ;)',
+                                                                          disable_notification=1,
+                                                                          reply_markup=ReplyKeyboardRemove())
+                                                    break_condition = True
+                                                elif update.message.text == 'Nope 🚫':
+                                                    logger.log('[PENDING] User does not want to fill up '
+                                                               'tickets. Exiting...', 1)
+                                                    self.bot.send_message(chat_id, 'Okay, exiting gracefully...',
+                                                                          reply_markup=ReplyKeyboardRemove())
+                                                    break_condition = True
+                                                else:
+                                                    logger.log('[PENDING] User wrote some nonsense while trying to get'
+                                                               'answer on pending. Tyring again...')
+                                                    self.bot.send_message(chat_id, 'Dude, please press one of the fucking '
+                                                                                   'buttons. Wtf is wrong with you...',
+                                                                          reply_markup = markup)
+                                                    self.clear_pending_updates()
 
                             elif '/stat' in text:
                                 restaurant_name = statistics.extract_restaurant_name_generic(text)
