@@ -7,6 +7,7 @@ import dotenv
 import threading
 import time
 import utils
+import concurrent.futures
 from utils import Logger
 import telebot
 from telebot import types
@@ -173,7 +174,7 @@ class UCSAustriaChanel:
         logger.log(f'[{employee.upper()} PERSONAL CHAT] Starting request for error code and resolution'
               f'code. Restaurant name - {restaurant_name}. Deactivating other commands...', 1)
         personal_chat_id = str(os.getenv(f'{employee.upper()}_TELEGRAM_ID'))
-        self.pause_personal_monitoring = normal_mode
+        self.pause_personal_monitoring = True
         if employee == 'Bot':
             return
 
@@ -184,10 +185,16 @@ class UCSAustriaChanel:
             device_types = list(statistics.load_error_descriptions().keys())
             with_else = device_types + ['Not an issue']
             markup = generate_buttons(with_else, markup)
-            self.bot.send_message(personal_chat_id,
-                                  f"Choose device type which you fixed in {restaurant_name}",
-                                  reply_markup=markup)
-
+            if normal_mode:
+                self.bot.send_message(personal_chat_id,
+                                      f"Choose device type which you fixed in {restaurant_name}",
+                                      reply_markup=markup)
+            else:
+                row_array = self.support_data_wks.get_array_of_row(row)
+                self.bot.send_message(personal_chat_id, f'Please choose device type which you fixed in '
+                    f'<b>[{restaurant_name}]</b>, at date: <b>[{row_array[3]}.{row_array[2]}.{row_array[1]}]</b>,'
+                                                        f' at time: <b>[{row_array[4]}]</b>',
+                                      parse_mode='HTML', reply_markup=markup)
             self.clear_pending_updates()
             while True:
                 updates = self.bot.get_updates()
@@ -509,10 +516,15 @@ class UCSAustriaChanel:
                     self.send_message(f'Got update on issue in {restaurant_name} that was fixed by {employee}.'
                                       f'\nError code - {error_code}, resolution code - {resolution_code}. Issue is '
                                       f'now fully closed')
-                    self.bot.send_message(personal_chat_id, 'Thank you. All needed info was received and database in '
-                                                            'worksheet was updated, you can continue '
-                                                            'with your work or relaxation ;)',
-                                          reply_markup=ReplyKeyboardRemove(), disable_notification=1)
+                    if normal_mode:
+                        self.bot.send_message(personal_chat_id, 'Thank you. All needed info was received and database in '
+                                                                'worksheet was updated, you can continue '
+                                                                'with your work or relaxation ;)',
+                                              reply_markup=ReplyKeyboardRemove(), disable_notification=1)
+                    else:
+                        self.bot.send_message(personal_chat_id, 'Thanks, I am currently updating worksheet. This may '
+                                                                'take some time up to a minute. Please wait...',
+                                              reply_markup=ReplyKeyboardRemove(), disable_notification=1)
                     self.clear_pending_updates()
                     self.pause_personal_monitoring = False
                     error_code = error_code.split(' ')[1]
@@ -531,12 +543,18 @@ class UCSAustriaChanel:
             return  # If bot was started less than a minute ago
 
         stop_event = threading.Event()
-        threading.Thread(target=check_for_error,
-                         args=(stop_event,)).start()
+
+        if not normal_mode:
+            thread = threading.Thread(target=check_for_error,args=(stop_event,))
+            thread.start()
+            thread.join()
+        else:
+            threading.Thread(target=check_for_error, args=(stop_event,)).start()
+
 
     def fill_pending_tickets(self, tickets, chat_id):
         """
-        Lets user fill up closed tickets without error/resol codes. STOPS if self.pause_personal_monitoring is set
+        Lets user fill up closed tickets without error/resol codes. STOPS if self.pause_personal_monitoring is set.
         Input:
             tickets - a 2D array of form: tickets = [ [1756, 1812], [ 'Normal support data row' ] ]
             chat_id - id of a personal chat of employee
@@ -544,11 +562,24 @@ class UCSAustriaChanel:
             None, only telegram stuff going on
         """
         logger.log('[FILL PENDING] Currently in fill_pending_tickets function', 0)
-        for id, ticket in enumerate(tickets[0]):
-            logger.log(f'[FILL PENDING] Now on ticket: {ticket}', 0)
-            self.request_problem_resoluion_codes(tickets[1][id], ticket[0], ticket[9], normal_mode=False)
-        logger.log('[FILL PENDING] All request tickets are now currently filled, exiting', 1)
 
+        # Using ThreadPoolExecutor to process tickets sequentially
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+            futures = []
+            for id, ticket in enumerate(tickets[0]):
+                logger.log(f'[FILL PENDING] Now on ticket: {ticket}', 0)
+                future = executor.submit(self.request_problem_resoluion_codes,
+                                         tickets[1][id], ticket[0], ticket[9], normal_mode=False)
+                futures.append(future)
+
+            # Optionally, wait for all futures to complete
+            for future in concurrent.futures.as_completed(futures):
+                try:
+                    future.result()  # if you want to handle exceptions or ensure all tasks completed
+                except Exception as e:
+                    logger.log(f'Error processing ticket: {e}', 3)
+
+        logger.log('[FILL PENDING] All request tickets are now currently filled, exiting', 1)
 
     def personal_chat_monitoring_thread(self):
         while True:  # Replace with a more suitable condition for your application
@@ -596,6 +627,10 @@ class UCSAustriaChanel:
                                         year = splitted[2]
                                     )
                                 logger.log(f'\t[PENDING] tickets: {tickets}', 0)
+                                if len(tickets[0]) == 0:
+                                    self.bot.send_message(chat_id, f'All tickets for selected month were filled with'
+                                                                   f' error and resolution codes. Great job!')
+                                    break
                                 formated_tickets = utils.format_incomplete_tickets(tickets)
                                 logger.log(formated_tickets, 0)
                                 markup = types.ReplyKeyboardMarkup(row_width=2)
@@ -610,6 +645,7 @@ class UCSAustriaChanel:
                                 while not self.pause_personal_monitoring and not break_condition:
                                     updates = self.bot.get_updates()
                                     for update in updates:
+                                        print('getting updates')
                                         if update.message:
                                             if str(update.message.chat.id) == str(chat_id):
                                                 if update.message.text == 'Yes ✅':

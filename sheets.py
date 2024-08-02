@@ -169,6 +169,9 @@ class SupportDataWKS(Worksheet):
     def today_results(self):
         pass
 
+    def get_array_of_row(self, row_num):
+        return self.get_buff()[row_num-1]
+
     def get_object_common_issues(self, restaurant_name, start_period=None, end_period=None):
         """
         Calculate the common issues for a given restaurant within a specified period.
@@ -339,6 +342,8 @@ class SupportDataWKS(Worksheet):
 
 if __name__ == '__main__':
     support_data_wks = SupportDataWKS(UPD_INTERVAL=2, OUTPUT_UPDATES=True)
-    time.sleep(4)
-    tickets = support_data_wks.retrieve_incomplete_tickets('Egor')
-    print(utils.format_incomplete_tickets(tickets))
+    #time.sleep(4)
+    #tickets = support_data_wks.retrieve_incomplete_tickets('Egor')
+    #print(utils.format_incomplete_tickets(tickets))
+
+    print(support_data_wks.get_array_of_row(1812))
