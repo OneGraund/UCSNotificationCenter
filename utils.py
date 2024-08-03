@@ -8,6 +8,22 @@ def get_date_and_time():
 def get_time():
     return datetime.now().strftime("%H:%M:%S")
 
+def get_date():
+    return datetime.now().strftime("%d_%m_%Y")
+
+def get_int_year():
+    return int(datetime.now().strftime("%Y"))
+
+def get_int_month():
+    return int(datetime.now().strftime("%m"))
+
+def format_incomplete_tickets(tickets):
+    to_return = (f'For year {tickets[0][0][1]}, at month {tickets[0][0][2]}, you have {len(tickets[0])} closed tickets '
+                 f'with unspecified error/resolution codes:\n')
+    for num, ticket in enumerate(tickets[0]):
+        to_return += f'• Ticket: {tickets[1][num]}, Rst: {ticket[9]}, day: {ticket[3]}, time: {ticket[4][:5]}\n'
+    return to_return + '\nDo you want to start the process to fill tickets?'
+
 
 def get_device_info():
     system_info = {
@@ -25,7 +41,7 @@ from datetime import datetime
 
 class Logger:
     def __init__(self, filename: str = "", file_extension: str = ".log", logging_level: int = 0):
-        self.filename = os.path.join("logs/", filename + file_extension)
+        self.filename = os.path.join("logs/", filename + get_date() + "_" + file_extension)
         self.logging_level = logging_level
 
     def log(self, message: str, level: int = 0) -> None:

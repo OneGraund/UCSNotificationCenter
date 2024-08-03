@@ -7,6 +7,7 @@ import dotenv
 import threading
 import time
 import utils
+import concurrent.futures
 from utils import Logger
 import telebot
 from telebot import types
@@ -169,7 +170,7 @@ class UCSAustriaChanel:
         except Exception as e:
             logger.log(f'[CLEAR PENDING UPDATES] Error: {e}', 3)
 
-    def request_problem_resoluion_codes(self, row, employee, restaurant_name):
+    def request_problem_resoluion_codes(self, row, employee, restaurant_name, normal_mode = True):
         logger.log(f'[{employee.upper()} PERSONAL CHAT] Starting request for error code and resolution'
               f'code. Restaurant name - {restaurant_name}. Deactivating other commands...', 1)
         personal_chat_id = str(os.getenv(f'{employee.upper()}_TELEGRAM_ID'))
@@ -184,10 +185,16 @@ class UCSAustriaChanel:
             device_types = list(statistics.load_error_descriptions().keys())
             with_else = device_types + ['Not an issue']
             markup = generate_buttons(with_else, markup)
-            self.bot.send_message(personal_chat_id,
-                                  f"Choose device type which you fixed in {restaurant_name}",
-                                  reply_markup=markup)
-
+            if normal_mode:
+                self.bot.send_message(personal_chat_id,
+                                      f"Choose device type which you fixed in {restaurant_name}",
+                                      reply_markup=markup)
+            else:
+                row_array = self.support_data_wks.get_array_of_row(row)
+                self.bot.send_message(personal_chat_id, f'Please choose device type which you fixed in '
+                    f'<b>[{restaurant_name}]</b>, at date: <b>[{row_array[3]}.{row_array[2]}.{row_array[1]}]</b>,'
+                                                        f' at time: <b>[{row_array[4]}]</b>',
+                                      parse_mode='HTML', reply_markup=markup)
             self.clear_pending_updates()
             while True:
                 updates = self.bot.get_updates()
@@ -452,10 +459,16 @@ class UCSAustriaChanel:
                 if device_name is None and issue_type is None and error_code is None and resolution_code is None:
                     device_name = request_device_type()
                     if device_name == 'Else':
-                        self.bot.send_message(personal_chat_id, "Resolved issue will not be marked with an error"
-                                              " and a resolution code, however it will still appear in SupportData",
-                                              reply_markup=ReplyKeyboardRemove(), disable_notification=1)
+                        #self.bot.send_message(personal_chat_id, "Resolved issue will not be marked with an error"
+                        #                      " and a resolution code, however it will still appear in SupportData",
+                        #                      reply_markup=ReplyKeyboardRemove(), disable_notification=1)
+                        self.bot.send_message(personal_chat_id, "Resolved issue will be marked with a 0000 error and "
+                                                                "resolution code, practicaly identifying it as not "
+                                                                "an issue",reply_markup=ReplyKeyboardRemove(),
+                                              disable_notification=1)
+                        self.support_data_wks.update_problem_resolution_codes(row, '0000', '0000')
                         self.send_message(f'Issue in {restaurant_name} was not an Issue')
+                        logger.log(f'[REQ ERR] User marked an issue as not an issue, it will be updated as so')
                         stop_event.set()
                         break
                     else:
@@ -503,10 +516,15 @@ class UCSAustriaChanel:
                     self.send_message(f'Got update on issue in {restaurant_name} that was fixed by {employee}.'
                                       f'\nError code - {error_code}, resolution code - {resolution_code}. Issue is '
                                       f'now fully closed')
-                    self.bot.send_message(personal_chat_id, 'Thank you. All needed info was received and database in '
-                                                            'worksheet was updated, you can continue '
-                                                            'with your work or relaxation ;)',
-                                          reply_markup=ReplyKeyboardRemove(), disable_notification=1)
+                    if normal_mode:
+                        self.bot.send_message(personal_chat_id, 'Thank you. All needed info was received and database in '
+                                                                'worksheet was updated, you can continue '
+                                                                'with your work or relaxation ;)',
+                                              reply_markup=ReplyKeyboardRemove(), disable_notification=1)
+                    else:
+                        self.bot.send_message(personal_chat_id, 'Thanks, I am currently updating worksheet. This may '
+                                                                'take some time up to a minute. Please wait...',
+                                              reply_markup=ReplyKeyboardRemove(), disable_notification=1)
                     self.clear_pending_updates()
                     self.pause_personal_monitoring = False
                     error_code = error_code.split(' ')[1]
@@ -525,8 +543,43 @@ class UCSAustriaChanel:
             return  # If bot was started less than a minute ago
 
         stop_event = threading.Event()
-        threading.Thread(target=check_for_error,
-                         args=(stop_event,)).start()
+
+        if not normal_mode:
+            thread = threading.Thread(target=check_for_error,args=(stop_event,))
+            thread.start()
+            thread.join()
+        else:
+            threading.Thread(target=check_for_error, args=(stop_event,)).start()
+
+
+    def fill_pending_tickets(self, tickets, chat_id):
+        """
+        Lets user fill up closed tickets without error/resol codes. STOPS if self.pause_personal_monitoring is set.
+        Input:
+            tickets - a 2D array of form: tickets = [ [1756, 1812], [ 'Normal support data row' ] ]
+            chat_id - id of a personal chat of employee
+        Output:
+            None, only telegram stuff going on
+        """
+        logger.log('[FILL PENDING] Currently in fill_pending_tickets function', 0)
+
+        # Using ThreadPoolExecutor to process tickets sequentially
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+            futures = []
+            for id, ticket in enumerate(tickets[0]):
+                logger.log(f'[FILL PENDING] Now on ticket: {ticket}', 0)
+                future = executor.submit(self.request_problem_resoluion_codes,
+                                         tickets[1][id], ticket[0], ticket[9], normal_mode=False)
+                futures.append(future)
+
+            # Optionally, wait for all futures to complete
+            for future in concurrent.futures.as_completed(futures):
+                try:
+                    future.result()  # if you want to handle exceptions or ensure all tasks completed
+                except Exception as e:
+                    logger.log(f'Error processing ticket: {e}', 3)
+
+        logger.log('[FILL PENDING] All request tickets are now currently filled, exiting', 1)
 
     def personal_chat_monitoring_thread(self):
         while True:  # Replace with a more suitable condition for your application
@@ -549,6 +602,76 @@ class UCSAustriaChanel:
                                 except Exception as e:
                                     logger.log(f'[KILLYOURSELF ERROR] Failed running os._exit(0),'
                                           f' info: {e}', 5)
+                            elif '/pending' in text:
+                                '''/pending can be specified with additional parameters like that: 
+                                    /pending 7 2023 or /pending 7 (for current year)
+                                    /pending (for current month and current year)
+                                '''
+                                logger.log(f'[PERSONAL CHAT COMMAND] [PENDING] Employee requested to retrieve data on'
+                                           f' incomplete tickets...', 1)
+                                splitted = text.split(' ')
+                                tickets = None
+                                if len(splitted) == 1:
+                                    tickets = self.support_data_wks.retrieve_incomplete_tickets(
+                                        employee = is_from_ucs(update.message)
+                                    )
+                                elif len(splitted) == 2:
+                                    tickets = self.support_data_wks.retrieve_incomplete_tickets(
+                                        employee = is_from_ucs(update.message),
+                                        month = splitted[1]
+                                    )
+                                elif len(splitted) == 3:
+                                    tickets = self.support_data_wks.retrieve_incomplete_tickets(
+                                        employee = is_from_ucs(update.message),
+                                        month = splitted[1],
+                                        year = splitted[2]
+                                    )
+                                logger.log(f'\t[PENDING] tickets: {tickets}', 0)
+                                if len(tickets[0]) == 0:
+                                    self.bot.send_message(chat_id, f'All tickets for selected month were filled with'
+                                                                   f' error and resolution codes. Great job!')
+                                    break
+                                formated_tickets = utils.format_incomplete_tickets(tickets)
+                                logger.log(formated_tickets, 0)
+                                markup = types.ReplyKeyboardMarkup(row_width=2)
+                                answers = ['Yes ✅', 'Nope 🚫']
+                                markup = generate_buttons(answers, markup)
+                                self.bot.send_message(chat_id, formated_tickets, reply_markup=markup)
+                                # set while true cycle, with a stop event because if new request
+                                # comes, we want to stop this bullshit
+                                break_condition = False
+                                logger.log(f'[PENDING] Asking user whether he want to fill up unfullfiled tickets', 1)
+                                self.clear_pending_updates()
+                                while not self.pause_personal_monitoring and not break_condition:
+                                    updates = self.bot.get_updates()
+                                    for update in updates:
+                                        print('getting updates')
+                                        if update.message:
+                                            if str(update.message.chat.id) == str(chat_id):
+                                                if update.message.text == 'Yes ✅':
+                                                    logger.log(f'[PENDING] User does want to fill up tickets. Starting the'
+                                                               f' process...')
+                                                    self.fill_pending_tickets(tickets, chat_id)
+                                                    self.bot.send_message(chat_id,
+                                                                          'Thanks! Specified tickets now have error/resol'
+                                                                          'codes! Please try to fill them in time next time'
+                                                                          ' ;)',
+                                                                          disable_notification=1,
+                                                                          reply_markup=ReplyKeyboardRemove())
+                                                    break_condition = True
+                                                elif update.message.text == 'Nope 🚫':
+                                                    logger.log('[PENDING] User does not want to fill up '
+                                                               'tickets. Exiting...', 1)
+                                                    self.bot.send_message(chat_id, 'Okay, exiting gracefully...',
+                                                                          reply_markup=ReplyKeyboardRemove())
+                                                    break_condition = True
+                                                else:
+                                                    logger.log('[PENDING] User wrote some nonsense while trying to get'
+                                                               'answer on pending. Tyring again...')
+                                                    self.bot.send_message(chat_id, 'Dude, please press one of the fucking '
+                                                                                   'buttons. Wtf is wrong with you...',
+                                                                          reply_markup = markup)
+                                                    self.clear_pending_updates()
 
                             elif '/stat' in text:
                                 restaurant_name = statistics.extract_restaurant_name_generic(text)
@@ -585,7 +708,8 @@ class UCSAustriaChanel:
                         last_update_id = updates[-1].update_id
                         self.bot.get_updates(offset=last_update_id + 1, timeout=1)
                 except Exception as e:
-                    logger.log(f"Error fetching updates in personal monitoring thread: {e}", 3)
+                    logger.log(f"Error fetching updates in personal monitoring thread:"
+                               f" {e}\n{traceback.format_exc()}", 3)
                     self.clear_pending_updates()
             #else:
             #    print("Polling paused.")
@@ -845,7 +969,8 @@ class TelegramChanel:
             row = self.support_data_wks.upload_issue_data(
                 response_time=rp_time, resolution_time=elapsed_time,
                 person_name=is_from_ucs(message, self.employees), restaurant_name=self.str_name,
-                warning_status=self.responsed_at_warning_level
+                warning_status=self.responsed_at_warning_level,
+                restaurant_country = self.language
             )
             if self.REQUEST_ERROR_RESOLUTION_CODE:
                 logger.log(f'[{self.str_name.upper()}] REQ ERR RESOL CODE row is saved to later be updated', 0)
@@ -935,15 +1060,18 @@ class TelegramChanel:
             elif is_from_ucs(message, self.employees) and (
                     lowered_message == 'not an issue' or lowered_message == 'lock' or lowered_message == 'not a issue'):
                 # or 'kein problem' in lowered_message:
-                self.status = 'locked'
+                #self.status = 'locked'
+                self.status = 'resolved'
                 self.stop_event.set()
                 self.warning = 'no warning'
                 self.done_reminders_sent = 0
-                logger.log(f'[{self.str_name.upper()} TG CHANEL] false issue. Setting to locked :|', 2)
-                self.send_message('Okay, removing issue. Locking bot for further discussion. Type "Unlock" to unlock')
+                #logger.log(f'[{self.str_name.upper()} TG CHANEL] false issue. Setting to locked :|', 2)
+                logger.log(f'[{self.str_name.upper()}] TG CHANEL] false issue, removing unresolved status and thats it')
+                self.send_message('Okay, issue removed')
             # """-----------------------------------------------------------------------"""
 
             # """-----------------Unlocking chanel--------------------------------------"""
+            # NO LONGER NEEDED, JUST FOR HISTORY PURPOSE
             elif is_from_ucs(message, self.employees) and lowered_message == 'unlock' and self.status == 'locked':
                 self.status = 'resolved'
                 self.done_reminders_sent = 0
@@ -954,7 +1082,10 @@ class TelegramChanel:
             # """-------------Remove warning, but leave unresolved status---------------"""
             elif is_from_ucs(message, self.employees) and self.status == 'unresolved' and self.warning != 'no warning':
                 self.who_answered_to_report = is_from_ucs(message, self.employees)
-                self.send_message(f'{self.who_answered_to_report} is now resolving the issue in {self.str_name} after '
+                #self.send_message(f'{self.who_answered_to_report} is now resolving the issue in {self.str_name} after '
+                #                  f'{self.warning}')
+                self.main_chanel.send_message(f'{self.who_answered_to_report} is now resolving the issue in '
+                                              f'{self.str_name} after'
                                   f'{self.warning}')
                 self.responsed_at_warning_level = self.warning
                 self.stop_event.set()
