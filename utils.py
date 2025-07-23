@@ -1,6 +1,6 @@
 from datetime import datetime
 import platform
-
+import os
 
 def get_date_and_time():
     return datetime.now().strftime("%d.%m.%Y %H:%M:%S")
@@ -25,6 +25,16 @@ def format_incomplete_tickets(tickets):
     return to_return + '\nDo you want to start the process to fill tickets?'
 
 
+def fetch_employees_from_env():
+    employees = []
+    for i in range(1, 20):
+        val = os.getenv(f'EMPLOYEE{i}_NAME')
+        if val!='':
+            employees.append(val)
+        else:
+            break
+    return employees
+
 def get_device_info():
     system_info = {
         "Operating System": platform.system(),
@@ -35,8 +45,6 @@ def get_device_info():
     }
     return system_info
 
-import os
-from datetime import datetime
 
 
 class Logger:

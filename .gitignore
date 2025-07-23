@@ -1,5 +1,5 @@
 .env
-service_account.json
+*.json
 __pycache__/
 *.txt
 .idea/
@@ -8,4 +8,7 @@ test.py
 call_request.txt
 error_codes.json
 resolution_codes.json
-logs/logs.log
+logs/*.log
+myenv/
+.env/
+venv/

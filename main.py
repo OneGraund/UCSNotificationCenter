@@ -10,7 +10,7 @@ import time
 import utils
 from sheets import SupportWKS, SupportDataWKS
 from gui import input_thread
-from utils import Logger
+from utils import Logger, fetch_employees_from_env
 
 logger = Logger(filename="logs", logging_level=0)
 
@@ -59,22 +59,24 @@ channel_params = {
     'PlLinzChanel': ('KFC_PL_LINZ_CHAT_ID', 'UCS_Support_Pl_Linz_Bot_TELEGRAM_API_TOKEN', 'de'),
     'EuropaBbChanel': ('KFC_EUROPA_BB_CHAT_ID', 'UCS_Support_Europa_Bb_Bot_TELEGRAM_API_TOKEN', 'sk'),
     'ZvonlenChanel': ('KFC_ZVLN_CHAT_ID', 'UCS_Support_Zvln_Bot_TELEGRAM_API_TOKEN', 'sk'),
+    'POPChanel' : ('KFC_POP_CHAT_ID', 'UCS_Support_POP_Bot_TELEGRAM_API_TOKEN', 'sk'),
+    'BBDChanel': ('KFC_BBD_CHAT_ID','UCS_Support_BBD_Bot_TELEGRAM_API_TOKEN','sk'),
+    'WelsChanel':('KFC_WELS_CHAT_ID','UCS_Support_Wels_Bot_TELEGRAM_API_TOKEN','de'),
+    'AMSChanel':('KFC_AMS_CHAT_ID','UCS_Support_AMS_Bot_TELEGRAM_API_TOKEN','de'),
+    'KLGChanel':('KFC_KLG_CHATID','UCS_Support_KLG_Bot_TELEGRAM_API_TOKEN','de'),
+    'VILChanel':('KFC_VIL_CHATID','UCS_Support_VIL_Bot_TELEGRAM_API_TOKEN','de'),
+    'MartinChanel':('KFC_MARTIN_CHATID','UCS_Support_Martin_Bot_TELEGRAM_API_TOKEN','sk'),
+    'STPChanel':('KFC_STP_CHATID','UCS_Support_STP_Bot_TELEGRAM_API_TOKEN','de'),
+    'NitraChanel':('KFC_Nitra_CHATID','UCS_Support_Nitra_Bot_TELEGRAM_API_TOKEN','sk'),
+    'LiezenChanel':('KFC_Liezen_CHATID','UCS_Support_Liezen_Bot_TELEGRAM_API_TOKEN','de'),
+    'LoosdorfChanel':('KFC_Loosdorf_CHATID','UCS_Support_Loosdorf_Bot_TELEGRAM_API_TOKEN','de'),
+    'WMTChannel':('KFC_WMT_CHATID','UCS_Support_WMT_Bot_TELEGRAM_API_TOKEN','de'),
+    'AVNChanel':('KFC_AVN_CHATID','UCS_Support_AVN_Bot_TELEGRAM_API_TOKEN','sk'),
+    'SPIChanel':('KFC_SPI_CHATID','UCS_Support_SPI_Bot_TELEGRAM_API_TOKEN','de'),
     'TestChanel': ('TEST_CHAT_ID', 'UCS_Support_Bot_TELEGRAM_API_TOKEN', 'de')
 }
 
-
-def fetch_employees_from_env():
-    employees = []
-    for i in range(1, 20):
-        val = os.getenv(f'EMPLOYEE{i}_NAME')
-        if val!='':
-            employees.append(val)
-        else:
-            break
-    return employees
-
 employees = fetch_employees_from_env()
-
 
 if __name__ == '__main__':
     # Reconfigure employees array, to put on the highest priority the person that is supporting today

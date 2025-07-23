@@ -273,7 +273,7 @@ class SupportDataWKS(Worksheet):
 
 
     def upload_issue_data(self, response_time, resolution_time, person_name, restaurant_name, warning_status,
-                          restaurant_country, problem_code=None, resolution_code=None):
+                          restaurant_country, problem_code=None, resolution_code=None,status='resolved'):
         logger.log(f'[SUPPORT DATA] Received a request to upload data without error/resol codes', 0)
         current_datetime = datetime.now()
         current_month = current_datetime.strftime('%m')
@@ -303,6 +303,8 @@ class SupportDataWKS(Worksheet):
         self.worksheet.update(f'J{row_to_upload_num}', restaurant_name)
         self.worksheet.update(f'K{row_to_upload_num}', warning_status)
         self.worksheet.update(f'P{row_to_upload_num}', restaurant_country)
+        self.worksheet.update(f'Q{row_to_upload_num}', status)
+
 
         logger.log(f'[SUPPORT DATA WKS] Data was uploaded', 0)
 

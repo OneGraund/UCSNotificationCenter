@@ -3,6 +3,7 @@ import traceback
 import statistics
 import os
 import json
+import sys
 import dotenv
 import threading
 import time
@@ -14,7 +15,7 @@ from telebot import types
 from telebot.types import ReplyKeyboardRemove
 from sip_call import call_employee_with_priority
 
-dotenv.load_dotenv()
+dotenv.load_dotenv(".env") # linux fix
 NOTIFY_DONE_INTERVAL_MIN = 1
 
 with open('resolution_codes.json', 'r') as resolution_codes_file:
@@ -38,7 +39,7 @@ class TelegramBot:
         return self.bot
 
 
-def is_from_ucs(message, employees=None):
+def is_from_ucs(message):
     # First we want to parse all employes telegram usernames in format of arrays, where main array contains
     # subarrays even if employe has only one telegram username
     # employes: [Vova, Egor, Yaro, Ivan, Igor, Alex] -> tg_usernames: [[vova_ucs, onegraund], [noname, egor_ucs], …]
@@ -46,36 +47,22 @@ def is_from_ucs(message, employees=None):
     if message is None:
         return 'Bot'
 
-    if employees:
-        tg_names = []
-        # print(f'[IS_FROM_UCS] Checking whether message was sent from ucs')
-        for employee in employees:
-            if os.getenv(f'{employee.upper()}_SECOND_TELEGRAM_USERNAME') != '':
-                tg_names.append([os.getenv(f"{employee.upper()}_TELEGRAM_USERNAME"),
-                                 os.getenv(f"{employee.upper()}_SECOND_TELEGRAM_USERNAME")])
-            else:
-                tg_names.append([os.getenv(f"{employee.upper()}_TELEGRAM_USERNAME")])
+    employees = utils.fetch_employees_from_env()
 
-        for emp_id, tg_username in enumerate(tg_names):
-            for id, sub_array in enumerate(tg_username):
-                if message.from_user.username == sub_array:
-                    return employees[emp_id]
-        return False
-    else:
-        if message.from_user.username == os.getenv('ALEX_TELEGRAM_USERNAME'):
-            return 'Alex'
-        elif message.from_user.username == os.getenv('EGOR_TELEGRAM_USERNAME') or \
-                message.from_user.username == os.getenv('EGOR_SECOND_TELEGRAM_USERNAME'):
-            return 'Egor'
-        elif message.from_user.username == os.getenv('VOVA_TELEGRAM_USERNAME') or \
-                message.from_user.username == os.getenv('VOVA_SECOND_TELEGRAM_USERNAME'):
-            return 'Vova'
-        elif message.from_user.username == os.getenv('IVAN_TELEGRAM_USERNAME'):
-            return 'Ivan'
-        elif message.from_user.username == os.getenv('IGOR_TELEGRAM_USERNAME'):
-            return 'Igor'
+    tg_names = []
+    # print(f'[IS_FROM_UCS] Checking whether message was sent from ucs')
+    for employee in employees:
+        if os.getenv(f'{employee.upper()}_SECOND_TELEGRAM_USERNAME') != '':
+            tg_names.append([os.getenv(f"{employee.upper()}_TELEGRAM_USERNAME"),
+                             os.getenv(f"{employee.upper()}_SECOND_TELEGRAM_USERNAME")])
         else:
-            return False
+            tg_names.append([os.getenv(f"{employee.upper()}_TELEGRAM_USERNAME")])
+
+    for emp_id, tg_username in enumerate(tg_names):
+        for id, sub_array in enumerate(tg_username):
+            if message.from_user.username == sub_array:
+                return employees[emp_id]
+    return False
 
 
 def is_thank_you(message):
@@ -562,6 +549,10 @@ class UCSAustriaChanel:
             None, only telegram stuff going on
         """
         logger.log('[FILL PENDING] Currently in fill_pending_tickets function', 0)
+
+        if sys.is_finalizing():
+            logger.log('[FILL PENDING] Skipping ticket filling because interpreter is shutting down', 3)
+            return
 
         # Using ThreadPoolExecutor to process tickets sequentially
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
@@ -1056,7 +1047,7 @@ class TelegramChanel:
                 threading.Thread(target=self.warning_thread, args=(self.stop_event,)).start()
             # """-----------------------------------------------------------------------"""
 
-            # """----------------Not an issue. Locking chanel for discussion------------------"""
+          # """----------------Not an issue. Locking chanel for discussion------------------"""
             elif is_from_ucs(message, self.employees) and (
                     lowered_message == 'not an issue' or lowered_message == 'lock' or lowered_message == 'not a issue'):
                 # or 'kein problem' in lowered_message:
@@ -1069,6 +1060,7 @@ class TelegramChanel:
                 logger.log(f'[{self.str_name.upper()}] TG CHANEL] false issue, removing unresolved status and thats it')
                 self.send_message('Okay, issue removed')
             # """-----------------------------------------------------------------------"""
+
 
             # """-----------------Unlocking chanel--------------------------------------"""
             # NO LONGER NEEDED, JUST FOR HISTORY PURPOSE
