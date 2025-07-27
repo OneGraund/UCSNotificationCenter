@@ -9,7 +9,7 @@ import threading
 import time
 import utils
 import concurrent.futures
-from utils import Logger
+from utils import Logger, Locker
 import telebot
 from telebot import types
 from telebot.types import ReplyKeyboardRemove
@@ -24,19 +24,34 @@ with open('resolution_codes.json', 'r') as resolution_codes_file:
 
 logger = Logger(filename="logs", logging_level=0)
 
-class TelegramBot:
+class TelegramBot(telebot.TeleBot):
     def __init__(self, dotenv_tokenname):
         self.bot = None
         self.dotenv_tokenname = dotenv_tokenname
         self.API_KEY = os.getenv(dotenv_tokenname)
         logger.log(f'[TELEGRAM BOT] Starting telegram bot with api token {dotenv_tokenname} '
               f'in .env file...', 1)
+        str_name = dotenv_tokenname[:-7].replace('_', ' ').lower()
+        self.lock = Locker(logger, str_name)
 
-    def start_bot(self):
-        self.bot = telebot.TeleBot(self.API_KEY, threaded=True)
+        super().__init__(self.API_KEY, threaded=True)
         # telebot.logger.setLevel(logging.DEBUG)
         logger.log(f'[TELEGRAM BOT {self.dotenv_tokenname}] Telegram bot started! ✔', 1)
-        return self.bot
+
+    # Overload of std TelegramBotAPI get_updates() method, which takes into account mutual exclusion
+    #   uses util.Locker class to instantiate a locker, which would lock access to TelegramAPI in case
+    #   one thread is doing a request  
+    def get_updates(self, offset=None, timeout = 20, allowed_updates=None, long_polling_timeout=20):
+        updates = None
+        if self.lock.lock():
+            try:
+                updates = super().get_updates(offset=offset, timeout=timeout, allowed_updates=allowed_updates,
+                                           long_polling_timeout=long_polling_timeout)
+            finally:
+                self.lock.unlock()
+        else:
+            logger.log(f"[TELEGRAM BOT] [{self.dotenv_tokenname}] [GET_UPDATES] method failed", 3)
+        return updates
 
 
 def is_from_ucs(message):
@@ -539,38 +554,50 @@ class UCSAustriaChanel:
             threading.Thread(target=check_for_error, args=(stop_event,)).start()
 
 
-    def fill_pending_tickets(self, tickets, chat_id):
-        """
-        Lets user fill up closed tickets without error/resol codes. STOPS if self.pause_personal_monitoring is set.
-        Input:
-            tickets - a 2D array of form: tickets = [ [1756, 1812], [ 'Normal support data row' ] ]
-            chat_id - id of a personal chat of employee
-        Output:
-            None, only telegram stuff going on
-        """
-        logger.log('[FILL PENDING] Currently in fill_pending_tickets function', 0)
 
+    def fill_pending_tickets( self, tickets: tuple[list[list], list[int]]) -> None:
+        """
+        Ask the user to supply error / resolution codes for every ticket
+        that is still “pending”.
+
+        Parameters
+        ----------
+        tickets : (rows, sheet_indices)
+            A pair where
+            • rows           – list of ticket rows, each with ≥ 10 columns
+            • sheet_indices  – list of the same length, giving each row’s
+                                index inside the Google Sheet
+
+        Returns
+        -------
+        None
+        """
+        # Abort gracefully if the interpreter is shutting down
         if sys.is_finalizing():
-            logger.log('[FILL PENDING] Skipping ticket filling because interpreter is shutting down', 3)
+            logger.log('[FILL PENDING] Interpreter is exiting – skipping', 3)
             return
 
-        # Using ThreadPoolExecutor to process tickets sequentially
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-            futures = []
-            for id, ticket in enumerate(tickets[0]):
-                logger.log(f'[FILL PENDING] Now on ticket: {ticket}', 0)
-                future = executor.submit(self.request_problem_resoluion_codes,
-                                         tickets[1][id], ticket[0], ticket[9], normal_mode=False)
-                futures.append(future)
+        rows, indices = tickets
 
-            # Optionally, wait for all futures to complete
-            for future in concurrent.futures.as_completed(futures):
-                try:
-                    future.result()  # if you want to handle exceptions or ensure all tasks completed
-                except Exception as e:
-                    logger.log(f'Error processing ticket: {e}', 3)
+        for sheet_row_index, row in zip(indices, rows):
+            try:
+                logger.log(f'[FILL PENDING] Processing ticket row {sheet_row_index}', 0)
+                employee_name   = row[0]
+                restaurant_name = row[9]
 
-        logger.log('[FILL PENDING] All request tickets are now currently filled, exiting', 1)
+                self.request_problem_resoluion_codes(
+                    sheet_row_index,
+                    employee_name,
+                    restaurant_name,
+                    normal_mode=False,
+                )
+
+            except Exception as exc:
+                logger.log(f'[FILL PENDING] Error on row {sheet_row_index}: {exc}', 3)
+
+        logger.log('[FILL PENDING] All pending tickets processed', 1)
+
+
 
     def personal_chat_monitoring_thread(self):
         while True:  # Replace with a more suitable condition for your application
@@ -642,7 +669,7 @@ class UCSAustriaChanel:
                                                 if update.message.text == 'Yes ✅':
                                                     logger.log(f'[PENDING] User does want to fill up tickets. Starting the'
                                                                f' process...')
-                                                    self.fill_pending_tickets(tickets, chat_id)
+                                                    self.fill_pending_tickets(tickets)
                                                     self.bot.send_message(chat_id,
                                                                           'Thanks! Specified tickets now have error/resol'
                                                                           'codes! Please try to fill them in time next time'
@@ -950,35 +977,35 @@ class TelegramChanel:
             else:
                 rp_elapsed = f'{rp_seconds} seconds'
             self.main_chanel.send_message(
-                f'{self.str_name}\nIssue resolved by {is_from_ucs(message, self.employees)} in'
+                f'{self.str_name}\nIssue resolved by {is_from_ucs(message)} in'
                 f' {elapsed}.\nResponse time: {rp_elapsed}')
             logger.log(
                 f"[{self.str_name.upper()} TG CHANEL] "
-                f"{is_from_ucs(message, self.employees)} resolved issue in {elapsed}", 1)
+                f"{is_from_ucs(message)} resolved issue in {elapsed}", 1)
             logger.log(f'[{self.str_name.upper()} TG CHANEL] Sending data bout rp_time, resol_time, rst, '
                        f'warning stat, employee to google spreadsheet', 0)
             row = self.support_data_wks.upload_issue_data(
                 response_time=rp_time, resolution_time=elapsed_time,
-                person_name=is_from_ucs(message, self.employees), restaurant_name=self.str_name,
+                person_name=is_from_ucs(message), restaurant_name=self.str_name,
                 warning_status=self.responsed_at_warning_level,
                 restaurant_country = self.language
             )
             if self.REQUEST_ERROR_RESOLUTION_CODE:
                 logger.log(f'[{self.str_name.upper()}] REQ ERR RESOL CODE row is saved to later be updated', 0)
-                self.main_chanel.request_problem_resoluion_codes(row, is_from_ucs(message, self.employees),
+                self.main_chanel.request_problem_resoluion_codes(row, is_from_ucs(message),
                                                                  self.str_name)
             to_append = f'{datetime.datetime.now().strftime("%A, %dth %B, %H:%M:%S")} issue resolved by ' \
-                        f' {is_from_ucs(message, self.employees)} in ' \
+                        f' {is_from_ucs(message)} in ' \
                         f'{elapsed_time} seconds. Response time: {end_time - self.response_time}\n'
-            with open(f'statistics/{is_from_ucs(message, self.employees).lower()}.txt', 'a') as f:
+            with open(f'statistics/{is_from_ucs(message).lower()}.txt', 'a') as f:
                 f.write(to_append)
-                logger.log(f'statistics/{is_from_ucs(message, self.employees).lower()}.txt updated with this data')
+                logger.log(f'statistics/{is_from_ucs(message).lower()}.txt updated with this data')
         else:
             logger.log(
                 f"[{self.str_name.upper()} TG CHANEL] "
-                f"{is_from_ucs(message, self.employees)} "
+                f"{is_from_ucs(message)} "
                 f"resolved issue", 1)
-            self.main_chanel.send_message(f'Issue resolved by {is_from_ucs(message, self.employees)}')
+            self.main_chanel.send_message(f'Issue resolved by {is_from_ucs(message)}')
 
     def restart_monitoring(self):
         self.start_monitoring()
@@ -1000,7 +1027,7 @@ class TelegramChanel:
                     lowered_message = ''
             logger.log(f'[{self.str_name} TELEGRAM CHANEL] Received new message, message text: '
                   f'{message.text}, from {message.from_user.username}, id - {message.from_user.id}. Is_from_UCS -- '
-                  f'{is_from_ucs(message, self.employees)}', 1)
+                  f'{is_from_ucs(message)}', 1)
 
             # Check whether the actuation time has been elapsed to fight with issue #2
             if (time.time() - self.launch_time) <= self.INIT_DELAY != 0:
@@ -1015,7 +1042,7 @@ class TelegramChanel:
                 self.chat_id = message.chat.id
 
             # """-------------Change status of telegram chanel from unknown-------------"""
-            if is_from_ucs(message, self.employees) and self.status == 'unknown':
+            if is_from_ucs(message) and self.status == 'unknown':
                 for status in TelegramChanel.statuses:
                     if status == lowered_message:
                         stat_loc = lowered_message.find(status)
@@ -1032,7 +1059,7 @@ class TelegramChanel:
             # """-----------------------------------------------------------------------"""
 
             # """------------Create new issue tech report---Start warning thread--------"""
-            elif self.status == 'resolved' and not is_from_ucs(message, self.employees) and not is_thank_you(message):
+            elif self.status == 'resolved' and not is_from_ucs(message) and not is_thank_you(message):
                 logger.log(f'[{self.str_name} TELEGRAM CHANEL] New issue report ⚠! Warning level 0', 2)
                 self.status = 'unresolved'
                 self.warning = 'warning0'
@@ -1048,7 +1075,7 @@ class TelegramChanel:
             # """-----------------------------------------------------------------------"""
 
           # """----------------Not an issue. Locking chanel for discussion------------------"""
-            elif is_from_ucs(message, self.employees) and (
+            elif is_from_ucs(message) and (
                     lowered_message == 'not an issue' or lowered_message == 'lock' or lowered_message == 'not a issue'):
                 # or 'kein problem' in lowered_message:
                 #self.status = 'locked'
@@ -1064,7 +1091,7 @@ class TelegramChanel:
 
             # """-----------------Unlocking chanel--------------------------------------"""
             # NO LONGER NEEDED, JUST FOR HISTORY PURPOSE
-            elif is_from_ucs(message, self.employees) and lowered_message == 'unlock' and self.status == 'locked':
+            elif is_from_ucs(message) and lowered_message == 'unlock' and self.status == 'locked':
                 self.status = 'resolved'
                 self.done_reminders_sent = 0
                 logger.log(f'[{utils.get_time()} [{self.str_name.upper()} TG CHANEL] unlocking chanel for further monitor', 1)
@@ -1072,8 +1099,8 @@ class TelegramChanel:
             # """-----------------------------------------------------------------------"""
 
             # """-------------Remove warning, but leave unresolved status---------------"""
-            elif is_from_ucs(message, self.employees) and self.status == 'unresolved' and self.warning != 'no warning':
-                self.who_answered_to_report = is_from_ucs(message, self.employees)
+            elif is_from_ucs(message) and self.status == 'unresolved' and self.warning != 'no warning':
+                self.who_answered_to_report = is_from_ucs(message)
                 #self.send_message(f'{self.who_answered_to_report} is now resolving the issue in {self.str_name} after '
                 #                  f'{self.warning}')
                 self.main_chanel.send_message(f'{self.who_answered_to_report} is now resolving the issue in '
@@ -1091,7 +1118,7 @@ class TelegramChanel:
 
             # """-----------------------Set status to resolved--------------------------"""
             elif self.status == 'unresolved' and self.warning == 'no warning' and is_resolution_message(message) \
-                    and is_from_ucs(message, self.employees):
+                    and is_from_ucs(message):
                 self.set_status_to_resolved(message)
             # """-----------------------------------------------------------------------"""
 
@@ -1186,7 +1213,7 @@ def start_bot_chanel_threads(main_chanel, channel_params,
                              PROD_TIMINGS, TEST_TIMINGS, TEST, support_wks, support_data_wks, fast_start):
     bot_threads = []
     for channel_name in return_channels_to_init(channel_params, TEST):
-        bot = TelegramBot(dotenv_tokenname=channel_params[channel_name][1]).start_bot()
+        bot = TelegramBot(dotenv_tokenname=channel_params[channel_name][1])
         logger.log(f'[THREAD {channel_name.upper()}] Starting thread 🔁', 0)
 
         if fast_start:

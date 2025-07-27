@@ -1,6 +1,7 @@
 from datetime import datetime
 import platform
 import os
+import time
 
 def get_date_and_time():
     return datetime.now().strftime("%d.%m.%Y %H:%M:%S")
@@ -78,6 +79,52 @@ class Logger:
                     f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] - {level_msg} - {message}\n"
                 )
 
+class Locker:
+    def __init__(self, logger:Logger, name:str, lock_dir="lockfiles", timeout=22, check_interval=0.1):
+        self.logger = logger
+        self.lock_dir = lock_dir
+        os.makedirs(self.lock_dir, exist_ok=True) # create lock dir, don't raise error if exists
+        self.lockfile_path = os.path.join(self.lock_dir, f'{name}.lock') # /lockfiles/kfc_nivy.lock
+        self.timeout = timeout
+        self.check_interval = check_interval
+        self.fd = None
+        self.logger.log(f"[LOCKER] [{name.upper()}] locker initiated")
+
+        if os.path.exists(self.lockfile_path):
+            try:
+                os.remove(self.lockfile_path)
+            except Exception as e:
+                self.logger.log("[LOCKER] {e}", 4)
+
+    # try to acquire the access to the request by infinitely checking whether the lock file already exists
+    # if it does, then we wait maximum of (float) timeout seconds with check intervals of check_interval
+    def lock(self) -> bool:
+        start_time = time.time()
+        while True:
+            try:
+                # O_CREAT - create if doesn't exist 
+                # O_EXCL  - will raise FileExistsError jumping to exception handler if file exists
+                # O_RDWR  - opens the file for both read and write (we want to write PID into the file)
+                self.fd = os.open(self.lockfile_path, os.O_CREAT | os.O_EXCL | os.O_RDWR)
+                os.write(self.fd, str(os.getpid()).encode()) # encode because os.write expects bytes
+                    # to read: pid = int(f.read().decode())
+                self.logger.log(f'[LOCKER] [{self.lockfile_path.upper()}] locked 🔒');
+                return True
+            except FileExistsError:
+                if time.time() - start_time >= self.timeout:
+                    return False
+                time.sleep(self.check_interval)
+
+    def unlock(self) -> bool:
+        try:
+            if self.fd is not None: 
+                os.close(self.fd)
+            if os.path.exists(self.lockfile_path):
+                os.remove(self.lockfile_path)
+        except Exception:
+            return False
+        self.logger.log(f'[LOCKER] [{self.lockfile_path.upper()}] unlocked 🔓');
+        return True
 
 # Example usage:
 if __name__ == "__main__":

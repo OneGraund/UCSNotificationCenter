@@ -12,3 +12,4 @@ logs/*.log
 myenv/
 .env/
 venv/
+lockfiles/

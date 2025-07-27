@@ -11,6 +11,7 @@ import utils
 from sheets import SupportWKS, SupportDataWKS
 from gui import input_thread
 from utils import Logger, fetch_employees_from_env
+from bot import TelegramBot
 
 logger = Logger(filename="logs", logging_level=0)
 
@@ -37,43 +38,44 @@ else:
     INIT_DELAY = 75
 
 channel_params = {
-    'WoerglChanel': ('KFC_WOERGL_CHATID', 'UCS_Support_Woergl_Bot_TELEGRAM_API_TOKEN', 'de'),
-    'MilChanel': ('KFC_MIL_CHATID', 'Ucs_Support_Mil_Bot_TELEGRAM_API_TOKEN', 'de'),
+    'WoerglChanel': ('KFC_WOERGL_CHATID', 'UCS_Support_Woergl_Bot_TELEGRAM_API_TOKEN', 'at'),
+    'MilChanel': ('KFC_MIL_CHATID', 'Ucs_Support_Mil_Bot_TELEGRAM_API_TOKEN', 'at'),
     'KosiceChanel': ('KFC_KOSICE_CHATID', 'Ucs_Support_Kosice_Bot_TELEGRAM_API_TOKEN', 'sk'),
-    'DpChanel': ('KFC_DP_CHAT_ID', 'Ucs_Support_Dp_Bot_TELEGRAM_API_TOKEN', 'de'),
-    'FloChanel': ('KFC_FLO_CHAT_ID', 'Ucs_Support_Flo_Bot_TELEGRAM_API_TOKEN', 'de'),
-    'BrnChanel': ('KFC_BRN_CHAT_ID', 'UCS_Support_Brn_Bot_TELEGRAM_API_TOKEN', 'de'),
+    'DpChanel': ('KFC_DP_CHAT_ID', 'Ucs_Support_Dp_Bot_TELEGRAM_API_TOKEN', 'at'),
+    'FloChanel': ('KFC_FLO_CHAT_ID', 'Ucs_Support_Flo_Bot_TELEGRAM_API_TOKEN', 'at'),
+    'BrnChanel': ('KFC_BRN_CHAT_ID', 'UCS_Support_Brn_Bot_TELEGRAM_API_TOKEN', 'at'),
     'BoryMallChanel': ('KFC_BORYMALL_CHAT_ID', 'UCS_Support_Borymall_Bot_TELEGRAM_API_TOKEN', 'sk'),
     'TrnChanel': ('KFC_TRN_CHAT_ID', 'UCS_Support_Trn_Bot_TELEGRAM_API_TOKEN', 'sk'),
     'AuParkChanel': ('KFC_AUPARK_CHAT_ID', 'UCS_Support_Aupark_Bot_TELEGRAM_API_TOKEN', 'sk'),
     'EuroveaChanel': ('KFC_EUROVEA_CHAT_ID', 'UCS_Support_Eurovea_Bot_TELEGRAM_API_TOKEN', 'sk'),
     'NivyChanel': ('KFC_NIVY_CHAT_ID', 'UCS_Support_Nivy_Bot_TELEGRAM_API_TOKEN', 'sk'),
     'TrnDrChanel': ('KFC_TRN_DR_CHAT_ID', 'UCS_Support_Trn_Dr_Bot_TELEGRAM_API_TOKEN', 'sk'),
-    'ScsChanel': ('KFC_SCS_CHAT_ID', 'UCS_Support_Scs_Bot_TELEGRAM_API_TOKEN', 'de'),
-    'MhsChanel': ('KFC_MHS_CHAT_ID', 'UCS_Support_Mhs_Bot_TELEGRAM_API_TOKEN', 'de'),
-    'ParChanel': ('KFC_PAR_CHAT_ID', 'UCS_Support_Par_Bot_TELEGRAM_API_TOKEN', 'de'),
-    'ColChanel': ('KFC_COL_CHAT_ID', 'UCS_Support_Col_Bot_TELEGRAM_API_TOKEN', 'de'),
+    'ScsChanel': ('KFC_SCS_CHAT_ID', 'UCS_Support_Scs_Bot_TELEGRAM_API_TOKEN', 'at'),
+    'MhsChanel': ('KFC_MHS_CHAT_ID', 'UCS_Support_Mhs_Bot_TELEGRAM_API_TOKEN', 'at'),
+    'ParChanel': ('KFC_PAR_CHAT_ID', 'UCS_Support_Par_Bot_TELEGRAM_API_TOKEN', 'at'),
+    'ColChanel': ('KFC_COL_CHAT_ID', 'UCS_Support_Col_Bot_TELEGRAM_API_TOKEN', 'at'),
     'VivoChanel': ('KFC_VIVO_CHAT_ID', 'UCS_Support_Vivo_Bot_TELEGRAM_API_TOKEN', 'sk'),
     'RelaxChanel': ('KFC_RELAX_CHAT_ID', 'UCS_Support_Relax_Bot_TELEGRAM_API_TOKEN', 'sk'),
-    'LugChanel': ('KFC_LUG_CHAT_ID', 'UCS_Support_Lug_Bot_TELEGRAM_API_TOKEN', 'de'),
-    'PlLinzChanel': ('KFC_PL_LINZ_CHAT_ID', 'UCS_Support_Pl_Linz_Bot_TELEGRAM_API_TOKEN', 'de'),
+    'LugChanel': ('KFC_LUG_CHAT_ID', 'UCS_Support_Lug_Bot_TELEGRAM_API_TOKEN', 'at'),
+    'PlLinzChanel': ('KFC_PL_LINZ_CHAT_ID', 'UCS_Support_Pl_Linz_Bot_TELEGRAM_API_TOKEN', 'at'),
     'EuropaBbChanel': ('KFC_EUROPA_BB_CHAT_ID', 'UCS_Support_Europa_Bb_Bot_TELEGRAM_API_TOKEN', 'sk'),
     'ZvonlenChanel': ('KFC_ZVLN_CHAT_ID', 'UCS_Support_Zvln_Bot_TELEGRAM_API_TOKEN', 'sk'),
     'POPChanel' : ('KFC_POP_CHAT_ID', 'UCS_Support_POP_Bot_TELEGRAM_API_TOKEN', 'sk'),
     'BBDChanel': ('KFC_BBD_CHAT_ID','UCS_Support_BBD_Bot_TELEGRAM_API_TOKEN','sk'),
-    'WelsChanel':('KFC_WELS_CHAT_ID','UCS_Support_Wels_Bot_TELEGRAM_API_TOKEN','de'),
-    'AMSChanel':('KFC_AMS_CHAT_ID','UCS_Support_AMS_Bot_TELEGRAM_API_TOKEN','de'),
-    'KLGChanel':('KFC_KLG_CHATID','UCS_Support_KLG_Bot_TELEGRAM_API_TOKEN','de'),
-    'VILChanel':('KFC_VIL_CHATID','UCS_Support_VIL_Bot_TELEGRAM_API_TOKEN','de'),
+    'WelsChanel':('KFC_WELS_CHAT_ID','UCS_Support_Wels_Bot_TELEGRAM_API_TOKEN','at'),
+    'AMSChanel':('KFC_AMS_CHAT_ID','UCS_Support_AMS_Bot_TELEGRAM_API_TOKEN','at'),
+    'KLGChanel':('KFC_KLG_CHATID','UCS_Support_KLG_Bot_TELEGRAM_API_TOKEN','at'),
+    'VILChanel':('KFC_VIL_CHATID','UCS_Support_VIL_Bot_TELEGRAM_API_TOKEN','at'),
     'MartinChanel':('KFC_MARTIN_CHATID','UCS_Support_Martin_Bot_TELEGRAM_API_TOKEN','sk'),
-    'STPChanel':('KFC_STP_CHATID','UCS_Support_STP_Bot_TELEGRAM_API_TOKEN','de'),
+    'STPChanel':('KFC_STP_CHATID','UCS_Support_STP_Bot_TELEGRAM_API_TOKEN','at'),
     'NitraChanel':('KFC_Nitra_CHATID','UCS_Support_Nitra_Bot_TELEGRAM_API_TOKEN','sk'),
-    'LiezenChanel':('KFC_Liezen_CHATID','UCS_Support_Liezen_Bot_TELEGRAM_API_TOKEN','de'),
-    'LoosdorfChanel':('KFC_Loosdorf_CHATID','UCS_Support_Loosdorf_Bot_TELEGRAM_API_TOKEN','de'),
-    'WMTChannel':('KFC_WMT_CHATID','UCS_Support_WMT_Bot_TELEGRAM_API_TOKEN','de'),
+    'LiezenChanel':('KFC_Liezen_CHATID','UCS_Support_Liezen_Bot_TELEGRAM_API_TOKEN','at'),
+    'LoosdorfChanel':('KFC_Loosdorf_CHATID','UCS_Support_Loosdorf_Bot_TELEGRAM_API_TOKEN','at'),
+    'WMTChannel':('KFC_WMT_CHATID','UCS_Support_WMT_Bot_TELEGRAM_API_TOKEN','at'),
     'AVNChanel':('KFC_AVN_CHATID','UCS_Support_AVN_Bot_TELEGRAM_API_TOKEN','sk'),
-    'SPIChanel':('KFC_SPI_CHATID','UCS_Support_SPI_Bot_TELEGRAM_API_TOKEN','de'),
-    'TestChanel': ('TEST_CHAT_ID', 'UCS_Support_Bot_TELEGRAM_API_TOKEN', 'de')
+    'SPIChanel':('KFC_SPI_CHATID','UCS_Support_SPI_Bot_TELEGRAM_API_TOKEN','at'),
+    # 'TestChanel': ('TEST_CHAT_ID', 'UCS_Support_Bot_TELEGRAM_API_TOKEN', 'at')
+    'TestChanel': ('TEST_CHAT_ID', 'UCS_Support_TEST_Bot_TELEGRAM_API_TOKEN', 'at')
 }
 
 employees = fetch_employees_from_env()
@@ -199,7 +201,7 @@ if __name__ == '__main__':
     ucs_chanel = None
     if not TEST:
         ucs_chanel = UCSAustriaChanel(
-            bot=telebot.TeleBot(os.getenv("UCS_Support_Bot_TELEGRAM_API_TOKEN")),
+            bot = TelegramBot(dotenv_tokenname="UCS_Support_Bot_TELEGRAM_API_TOKEN"),
             inits=to_init,
             TEST=0,
             NOTIFY_UCS_ON_START=NOTIFY_UCS_ON_START,
@@ -209,7 +211,7 @@ if __name__ == '__main__':
         )
     else:
         ucs_chanel = UCSAustriaChanel(
-            telebot.TeleBot(os.getenv("TEST_UCS_SUPPORT_Bot_TELEGRAM_API_TOKEN")),
+            bot = TelegramBot(dotenv_tokenname="TEST_UCS_SUPPORT_Bot_TELEGRAM_API_TOKEN"),
             inits=to_init,
             TEST=1,
             NOTIFY_UCS_ON_START=NOTIFY_UCS_ON_START,
